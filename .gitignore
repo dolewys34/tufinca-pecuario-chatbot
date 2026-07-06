@@ -1,0 +1,18 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Base de datos local
+*.db
+
+# Configuración con secretos
+.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Sistema
+.DS_Store
