@@ -3,6 +3,16 @@ import { api } from "../api";
 import type { ChatMessage } from "../types";
 import { MiniGrafico } from "./MiniGrafico";
 
+// Nombres amigables de las herramientas del agente (para mostrar transparencia).
+const NOMBRE_HERRAMIENTA: Record<string, string> = {
+  resumen_finca: "resumen de la finca",
+  buscar_animales: "inventario de animales",
+  consultar_inventario: "insumos y stock",
+  registrar_animal: "registro de animal",
+  registrar_vacunacion: "registro de vacunación",
+  generar_grafico: "estadísticas",
+};
+
 // Renderiza **negritas** y saltos de línea de forma simple.
 function texto_formateado(texto: string) {
   return texto.split("\n").map((linea, i) => {
@@ -66,6 +76,7 @@ export function ChatWidget() {
           motor: r.motor,
           graficos: r.graficos,
           opciones: r.opciones,
+          herramientas: r.herramientas,
         },
       ]);
     } catch {
@@ -106,6 +117,14 @@ export function ChatWidget() {
       <div className="chat-body" ref={bodyRef}>
         {mensajes.map((m, i) => (
           <div key={i} className={`burbuja ${m.autor}`}>
+            {m.herramientas && m.herramientas.length > 0 && (
+              <div className="herramientas-ia">
+                🔎 La IA consultó:{" "}
+                {[...new Set(m.herramientas)]
+                  .map((h) => NOMBRE_HERRAMIENTA[h] ?? h)
+                  .join(", ")}
+              </div>
+            )}
             {texto_formateado(m.texto)}
             {m.graficos && m.graficos.length > 0 && (
               <div className="graficos-chat">

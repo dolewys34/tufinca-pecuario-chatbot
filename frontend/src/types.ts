@@ -105,6 +105,7 @@ export interface ChatResponse {
   motor: string;
   graficos: Grafico[];
   opciones: OpcionChat[];
+  herramientas: string[];
 }
 
 export interface ChatMessage {
@@ -113,4 +114,5 @@ export interface ChatMessage {
   motor?: string;
   graficos?: Grafico[];
   opciones?: OpcionChat[];
+  herramientas?: string[];
 }

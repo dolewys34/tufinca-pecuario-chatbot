@@ -43,10 +43,18 @@ def test_crear_y_listar_animal() -> None:
     client.delete(f"/api/animales/{animal_id}")
 
 
-def test_chat_devuelve_graficos() -> None:
-    r = client.post("/api/chat", json={"mensaje": "muéstrame estadísticas"})
+def test_chat_estadisticas_boton() -> None:
+    # El botón "__stats" siempre devuelve gráficos (ruta determinista).
+    r = client.post("/api/chat", json={"mensaje": "__stats"})
     assert r.status_code == 200
     body = r.json()
     assert isinstance(body["graficos"], list)
     assert len(body["graficos"]) >= 1
     assert "datos" in body["graficos"][0]
+
+
+def test_chat_menu_tiene_opciones() -> None:
+    # Un saludo devuelve el menú con botones de opciones.
+    r = client.post("/api/chat", json={"mensaje": "hola"})
+    body = r.json()
+    assert len(body["opciones"]) >= 1

@@ -163,3 +163,4 @@ class ChatResponse(BaseModel):
     motor: str  # "azure-ai-foundry" | "reglas" | "asistente"
     graficos: list[Grafico] = []
     opciones: list[OpcionChat] = []
+    herramientas: list[str] = []   # herramientas que usó el agente (transparencia)

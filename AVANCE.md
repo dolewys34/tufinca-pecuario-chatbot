@@ -142,6 +142,21 @@ la IA real:
 
 ## 6. Historial de cambios
 
+### Iteración 7 — 2026-07-06 (chatbot → agente inteligente con herramientas)
+Reescritura del chatbot para que sea un **agente robusto** (`agent.py`):
+- **Function calling / herramientas**: el modelo de Azure decide qué consultar o
+  hacer. Herramientas: `resumen_finca`, `buscar_animales`, `consultar_inventario`,
+  `registrar_animal`, `registrar_vacunacion`, `generar_grafico`.
+- **Busca datos reales** y razona sobre ellos (p. ej. "¿cuál es mi animal más
+  caro?" → consulta y analiza), y **ejecuta acciones** ("registra un cerdo…"
+  crea el registro en la BD por lenguaje natural).
+- **Memoria de conversación** por sesión (entiende seguimientos como "¿y el más
+  barato?").
+- **Transparencia**: cada respuesta indica qué herramientas consultó la IA
+  (campo `herramientas`), visible en el chat ("🔎 La IA consultó: ...").
+- Se dejó de atrapar el texto libre con reglas: ahora todo lo que no sea un botón
+  del menú va al agente. Los flujos con botones siguen disponibles.
+
 ### Iteración 6 — 2026-07-06 (Panel de IA / analítica de Foundry en la app)
 - **Nueva vista "🤖 Panel de IA"**: muestra el consumo del modelo de Azure AI
   Foundry en tiempo real (consultas, tokens de entrada/salida, costo estimado y

@@ -16,14 +16,31 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src import models, schemas
+from src.config import settings
 from src.models import ESTADO_ACTIVO
-from src.modules.chatbot import ai_service
+from src.modules.chatbot import agent, ai_service
 from src.modules.pecuario import service
 
-# Estado en memoria: session_id -> {"flujo": str, "paso": str, "datos": dict}
+# Estado en memoria por sesión:
+#   {"flujo": str, "paso": str, "datos": dict, "historial": list[dict]}
 _SESIONES: dict[str, dict] = {}
 
+# Turnos de conversación que se recuerdan (para dar contexto al agente).
+_MAX_HISTORIAL = 8
+
 Opcion = schemas.OpcionChat
+
+
+def _historial(session_id: str) -> list[dict]:
+    return _SESIONES.setdefault(session_id, {}).get("historial", [])
+
+
+def _recordar(session_id: str, rol: str, contenido: str) -> None:
+    s = _SESIONES.setdefault(session_id, {})
+    hist = s.setdefault("historial", [])
+    hist.append({"role": rol, "content": contenido})
+    # Conservamos solo los últimos turnos.
+    del hist[:-_MAX_HISTORIAL]
 
 
 def _menu_opciones() -> list[Opcion]:
@@ -41,12 +58,14 @@ def _respuesta(
     opciones: list[Opcion] | None = None,
     graficos: list[schemas.Grafico] | None = None,
     motor: str = "asistente",
+    herramientas: list[str] | None = None,
 ) -> schemas.ChatResponse:
     return schemas.ChatResponse(
         respuesta=texto,
         motor=motor,
         graficos=graficos or [],
         opciones=opciones or [],
+        herramientas=herramientas or [],
     )
 
 
@@ -69,20 +88,35 @@ def procesar(db: Session, mensaje: str, session_id: str) -> schemas.ChatResponse
     if sesion and sesion.get("flujo"):
         return _continuar_flujo(db, texto, session_id, sesion)
 
-    # 2) Comandos/menú
+    # 2) Comandos exactos de los BOTONES del menú (los inicia el usuario al pulsar).
     bajo = texto.lower()
-    if texto in ("__menu", "__cancelar") or bajo in ("menu", "menú", "inicio", "hola", "buenas"):
+    if texto in ("__menu", "__cancelar") or bajo in ("menu", "menú", "inicio"):
         return _menu(db)
-    if texto == "__stats" or any(p in bajo for p in ("estadistic", "estadístic", "gráfic", "grafic", "reporte")):
+    if texto == "__stats":
         return _mostrar_stats(db)
-    if texto == "__inventario" or "inventario" in bajo:
+    if texto == "__inventario":
         return _mostrar_inventario(db)
-    if texto == "__nuevo_animal" or ("registrar" in bajo and "animal" in bajo):
+    if texto == "__nuevo_animal":
         return _iniciar_registro_animal(db, session_id)
-    if texto == "__nueva_vacuna" or ("registrar" in bajo and ("vacun" in bajo)):
+    if texto == "__nueva_vacuna":
         return _iniciar_registro_vacuna(db, session_id)
 
-    # 3) Lenguaje libre → IA (Azure) o reglas, con menú de apoyo.
+    # 3) Saludo simple → menú de bienvenida.
+    if bajo in ("hola", "buenas", "buenos dias", "buenas tardes", "buenas noches", "hey"):
+        return _menu(db)
+
+    # 4) Todo lo demás (texto libre) → AGENTE con herramientas (si Azure está activo).
+    if settings.azure_enabled:
+        historial = list(_historial(session_id))
+        respuesta, herramientas, graficos = agent.responder_agente(db, texto, historial)
+        _recordar(session_id, "user", texto)
+        _recordar(session_id, "assistant", respuesta)
+        return _respuesta(
+            respuesta, motor="azure-ai-foundry", graficos=graficos,
+            herramientas=herramientas, opciones=_menu_opciones(),
+        )
+
+    # 5) Sin Azure → motor de reglas de respaldo.
     respuesta, motor, graficos = ai_service.responder(db, texto)
     return _respuesta(respuesta, motor=motor, graficos=graficos, opciones=_menu_opciones())
 
