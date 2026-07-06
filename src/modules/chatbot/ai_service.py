@@ -10,12 +10,16 @@ Estrategia:
 """
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src import schemas
+from src import models, schemas
 from src.config import settings
 from src.modules.chatbot.bot import Chatbot
 from src.modules.pecuario import service as pecuario_service
+
+# Límite de filas de detalle que se inyectan al modelo (control de tokens).
+_MAX_FILAS = 40
 
 SYSTEM_PROMPT = """Eres "TuFinca Bot", un asistente agropecuario experto para la finca
 El Paraíso (Anzoátegui, Tolima, Colombia). Ayudas a productores rurales a gestionar
@@ -30,20 +34,47 @@ Reglas:
 
 
 def _contexto_finca(db: Session) -> str:
-    """Resumen en texto del estado actual de la finca para inyectar al modelo."""
+    """Resumen + detalle del estado actual de la finca para inyectar al modelo.
+
+    Incluye el listado real de animales e insumos (acotado a `_MAX_FILAS`) para
+    que el agente pueda responder preguntas específicas ("¿cuánto vale la Vaca
+    001?", "¿qué stock de vacuna tengo?") con datos reales.
+    """
     d = pecuario_service.construir_dashboard(db)
     especies = ", ".join(f"{k}: {v}" for k, v in d.por_especie.items()) or "sin registros"
     razas = ", ".join(f"{k}: {v}" for k, v in d.por_raza.items()) or "sin registros"
-    return (
-        "DATOS ACTUALES DE LA FINCA:\n"
-        f"- Total de animales: {d.total_animales} (activos: {d.total_activos})\n"
-        f"- Por especie: {especies}\n"
-        f"- Por raza: {razas}\n"
-        f"- Avalúo total: ${d.avaluo_total:,.0f}\n"
-        f"- Valor total: ${d.valor_total:,.0f}\n"
-        f"- Costo total registrado: ${d.costo_total:,.0f}\n"
-        f"- Vacunaciones registradas: {d.vacunaciones}\n"
-    )
+
+    partes = [
+        "DATOS ACTUALES DE LA FINCA:",
+        f"- Total de animales: {d.total_animales} (activos: {d.total_activos})",
+        f"- Por especie: {especies}",
+        f"- Por raza: {razas}",
+        f"- Avalúo total: ${d.avaluo_total:,.0f}",
+        f"- Valor total: ${d.valor_total:,.0f}",
+        f"- Costo total registrado: ${d.costo_total:,.0f}",
+        f"- Vacunaciones registradas: {d.vacunaciones}",
+        "",
+        "LISTA DE ANIMALES (código | nombre | especie | raza | valor | estado):",
+    ]
+
+    animales = db.scalars(select(models.Animal).limit(_MAX_FILAS)).all()
+    for a in animales:
+        esp = a.especie.Especie if a.especie else "?"
+        raza = a.raza.Raza if a.raza else "?"
+        val = f"${a.Valor:,.0f}" if a.Valor else "sin valor"
+        estado = "activo" if a.Estado == "A" else "inactivo"
+        partes.append(f"  · {a.Codigo or '-'} | {a.Animal} | {esp} | {raza} | {val} | {estado}")
+
+    productos = db.scalars(select(models.Producto).limit(_MAX_FILAS)).all()
+    if productos:
+        partes.append("")
+        partes.append("INSUMOS EN INVENTARIO (producto | valor unitario | stock):")
+        for p in productos:
+            val = f"${p.Valor:,.0f}" if p.Valor else "sin valor"
+            stock = sum(inv.Cantidad for inv in p.inventarios)
+            partes.append(f"  · {p.Producto} | {val} | {stock}")
+
+    return "\n".join(partes)
 
 
 _PALABRAS_ESTADISTICA = (

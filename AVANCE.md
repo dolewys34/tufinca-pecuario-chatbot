@@ -142,6 +142,20 @@ la IA real:
 
 ## 6. Historial de cambios
 
+### Iteración 5 — 2026-07-06 (IA de Azure conectada + integración final)
+- **Azure AI Foundry conectado y funcional**: recurso `tufinca-foundry-19888`,
+  modelo **gpt-4.1-mini** (GlobalStandard). El agente responde con datos reales
+  (`motor: azure-ai-foundry`).
+- **Contexto de datos enriquecido** (`ai_service.py`): ahora se inyecta al modelo
+  el listado real de animales e insumos (acotado), para responder preguntas
+  específicas ("¿cuál es mi animal más valioso?", "¿qué insumo tiene menos stock?").
+- **Script `scripts/azure_setup.sh`**: automatiza por Azure CLI la creación del
+  recurso, el despliegue del modelo y la generación del `.env`.
+- **Arranque con un comando**: `start.sh` (levanta backend + frontend + siembra BD)
+  y `stop.sh` (detiene todo).
+- El agente queda integrado: menús con botones + flujos que escriben en la BD +
+  IA de Azure para texto libre + estadísticas gráficas.
+
 ### Iteración 4 — 2026-07-06 (módulo pecuario completo + validación de la BD)
 Tras **validar campo por campo el dump real** (`Tufinca.sql` = base `Countryland`,
 **45 tablas**), se completó el módulo pecuario al 100%:
