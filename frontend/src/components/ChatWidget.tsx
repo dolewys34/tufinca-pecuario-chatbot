@@ -31,18 +31,39 @@ function texto_formateado(texto: string) {
   });
 }
 
+const CLAVE_SESION = "tufinca-chat-sesion";
+const CLAVE_MENSAJES = "tufinca-chat-mensajes";
+
+function cargarMensajesGuardados(): ChatMessage[] {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_MENSAJES) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
 export function ChatWidget() {
   const [abierto, setAbierto] = useState(false);
-  const [mensajes, setMensajes] = useState<ChatMessage[]>([]);
+  const [mensajes, setMensajes] = useState<ChatMessage[]>(cargarMensajesGuardados);
   const [texto, setTexto] = useState("");
   const [cargando, setCargando] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Un id de sesión estable por pestaña (mantiene el estado de los flujos guiados).
-  const sessionId = useMemo(
-    () => `web-${Math.random().toString(36).slice(2)}-${Date.now()}`,
-    []
-  );
+  // Sesión persistente: sobrevive a recargas de página (la memoria del agente
+  // y la conversación no se pierden).
+  const sessionId = useMemo(() => {
+    let s = localStorage.getItem(CLAVE_SESION);
+    if (!s) {
+      s = `web-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+      localStorage.setItem(CLAVE_SESION, s);
+    }
+    return s;
+  }, []);
+
+  // Guarda la conversación (últimos 50 mensajes) al cambiar.
+  useEffect(() => {
+    localStorage.setItem(CLAVE_MENSAJES, JSON.stringify(mensajes.slice(-50)));
+  }, [mensajes]);
 
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });

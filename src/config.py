@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     azure_openai_deployment: str = ""     # nombre del despliegue del modelo
     azure_openai_api_version: str = "2024-10-21"
 
+    # --- Telegram (canal de mensajería del chatbot) ---
+    # Crea el bot con @BotFather en Telegram y pega aquí el token.
+    telegram_bot_token: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

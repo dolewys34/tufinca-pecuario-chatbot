@@ -11,6 +11,7 @@ Flujo (bucle de razonamiento):
 """
 from __future__ import annotations
 
+import difflib
 import json
 
 from sqlalchemy import func, select
@@ -132,13 +133,19 @@ TOOLS = [
 # Ejecución de herramientas contra la base de datos
 # ---------------------------------------------------------------------------
 def _get_or_create(db: Session, modelo, campo: str, valor: str):
-    """Busca por nombre (insensible a mayúsculas) o crea el registro de catálogo."""
-    existente = db.scalars(
-        select(modelo).where(func.lower(getattr(modelo, campo)) == valor.lower())
-    ).first()
-    if existente:
-        return existente
-    nuevo = modelo(**{campo: valor, "Estado": ESTADO_ACTIVO})
+    """Busca en el catálogo con tolerancia a errores de tipeo, o crea el registro.
+
+    Ej.: si el usuario escribe "Durok" y existe "Duroc", usa "Duroc" en vez de
+    crear una raza duplicada.
+    """
+    existentes = {getattr(f, campo).lower(): f for f in db.scalars(select(modelo)).all()}
+    buscado = valor.strip().lower()
+    if buscado in existentes:
+        return existentes[buscado]
+    parecido = difflib.get_close_matches(buscado, list(existentes), n=1, cutoff=0.75)
+    if parecido:
+        return existentes[parecido[0]]
+    nuevo = modelo(**{campo: valor.strip(), "Estado": ESTADO_ACTIVO})
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)

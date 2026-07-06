@@ -51,6 +51,14 @@ echo "==> Levantando frontend en http://localhost:5173 ..."
 nohup bash -c "cd frontend && npm run dev" > "$LOG_DIR/frontend.log" 2>&1 &
 echo $! > "$LOG_DIR/frontend.pid"
 
+# --- 6. Bot de Telegram (solo si hay token configurado en .env) ---
+if grep -q "^TELEGRAM_BOT_TOKEN=.\+" .env 2>/dev/null; then
+  pkill -f "src.modules.chatbot.telegram_bot" 2>/dev/null || true
+  echo "==> Levantando bot de Telegram..."
+  nohup python -m src.modules.chatbot.telegram_bot > "$LOG_DIR/telegram.log" 2>&1 &
+  echo $! > "$LOG_DIR/telegram.pid"
+fi
+
 sleep 4
 IA=$(curl -s localhost:8000/api/health 2>/dev/null || echo "")
 
