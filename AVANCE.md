@@ -142,19 +142,21 @@ la IA real:
 
 ## 6. Historial de cambios
 
-### Iteración 8 — 2026-07-06 (Telegram + mejoras de robustez)
-Se eligió **Telegram** como canal de mensajería (WhatsApp bloquea/exige aprobación):
-- **Bot de Telegram** (`src/modules/chatbot/telegram_bot.py`): reutiliza el mismo
-  agente del sistema — menús con botones (inline keyboard), flujos guiados que
-  escriben en la BD, IA de Azure con herramientas y gráficos como barras de texto.
-  Usa long polling: funciona en local sin URL pública.
-- Configuración: `TELEGRAM_BOT_TOKEN` en `.env` (crear el bot con @BotFather).
-  `start.sh` levanta el bot automáticamente si hay token.
+### Iteración 9 — 2026-07-06 (se retira Telegram)
+- **Se eliminó la integración con Telegram** por decisión del proyecto (el bot,
+  su configuración en `.env`/`start.sh` y sus pruebas). El chatbot queda como
+  canal web únicamente. Si en el futuro se quiere un canal de mensajería, el
+  agente sigue siendo reutilizable (la integración vivía en un módulo aparte).
+- Nueva herramienta del agente: `historial_animal` (vacunas, alimentación y
+  procesos de un animal con fechas y costos).
+
+### Iteración 8 — 2026-07-06 (mejoras de robustez del chat)
 - **Chat web persistente**: la sesión y la conversación sobreviven a recargar la
   página (localStorage).
 - **Catálogos con tolerancia a errores de tipeo** en el agente: "Durok" resuelve
   a "Duroc" en vez de crear una raza duplicada (difflib, umbral 0.75).
-- 10 pruebas automatizadas en verde.
+- Degradación ante fallas de Azure (agente → IA simple → reglas) y purga de
+  sesiones antiguas del chat.
 
 ### Iteración 7 — 2026-07-06 (chatbot → agente inteligente con herramientas)
 Reescritura del chatbot para que sea un **agente robusto** (`agent.py`):

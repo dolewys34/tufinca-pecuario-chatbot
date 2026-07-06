@@ -50,21 +50,6 @@ El script crea el recurso de Azure AI Foundry, despliega **gpt-4.1-mini**, obtie
 el endpoint + la clave y los guarda en `.env`. Sin esto, el chatbot funciona en
 modo reglas. El indicador de la app muestra "⚡ IA activa" cuando queda conectado.
 
-## 📱 Chatbot por Telegram
-
-El mismo agente (menús, registro por chat, IA y estadísticas) funciona en Telegram:
-
-1. En Telegram, habla con **@BotFather** → `/newbot` → dale un nombre a tu bot.
-2. Copia el token que te entrega en el `.env`:
-   ```
-   TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
-   ```
-3. Ejecuta `bash start.sh` (levanta el bot automáticamente si hay token), o solo
-   el bot: `python -m src.modules.chatbot.telegram_bot`
-4. En Telegram, busca tu bot y envíale `/start`. 🎉
-
-Funciona en local sin URL pública (usa long polling, no webhooks).
-
 ## 📚 Documentación
 
 - **[AVANCE.md](AVANCE.md)** — bitácora de desarrollo, estructura, endpoints y roadmap.
