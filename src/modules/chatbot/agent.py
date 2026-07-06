@@ -115,6 +115,20 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "historial_animal",
+            "description": "Historial de eventos de un animal (vacunaciones, alimentación, procesos) con fechas y costos. Busca por código o nombre.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "animal": {"type": "string", "description": "Código o nombre del animal"},
+                },
+                "required": ["animal"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "generar_grafico",
             "description": "Genera un gráfico de barras para mostrarle al usuario. Úsalo cuando pida estadísticas o distribuciones.",
             "parameters": {
@@ -220,6 +234,35 @@ def _ejecutar_tool(db: Session, nombre: str, args: dict):
             Costo=args.get("costo"), Observaciones="Registrado por el agente IA",
         ))
         return {"ok": True, "mensaje": f"Vacunación de {tipo.Tipo_Vacunacion} registrada para {animal.Codigo or animal.Animal}."}, None
+
+    if nombre == "historial_animal":
+        ref = str(args["animal"]).lower()
+        animal = db.scalars(
+            select(models.Animal).where(
+                (func.lower(models.Animal.Codigo) == ref) | (func.lower(models.Animal.Animal) == ref)
+            )
+        ).first()
+        if not animal:
+            return {"ok": False, "error": f"No encontré un animal con código o nombre '{args['animal']}'."}, None
+        eventos = [
+            {
+                "proceso": d.proceso.Proceso_Pecuario if d.proceso else None,
+                "vacuna": d.tipo_vacunacion.Tipo_Vacunacion if d.tipo_vacunacion else None,
+                "producto": d.producto.Producto if d.producto else None,
+                "costo": d.Costo,
+                "fecha": d.Fecha_Inicio.strftime("%Y-%m-%d") if d.Fecha_Inicio else None,
+                "observaciones": d.Observaciones,
+            }
+            for d in animal.detalles
+        ]
+        return {
+            "animal": animal.Codigo or animal.Animal,
+            "especie": animal.especie.Especie if animal.especie else None,
+            "raza": animal.raza.Raza if animal.raza else None,
+            "valor": animal.Valor,
+            "eventos": eventos,
+            "costo_eventos": sum(d.Costo or 0 for d in animal.detalles),
+        }, None
 
     if nombre == "generar_grafico":
         stats = service.estadisticas(db)

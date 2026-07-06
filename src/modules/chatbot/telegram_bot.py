@@ -33,6 +33,7 @@ NOMBRE_HERRAMIENTA = {
     "consultar_inventario": "insumos y stock",
     "registrar_animal": "registro de animal",
     "registrar_vacunacion": "registro de vacunación",
+    "historial_animal": "historial del animal",
     "generar_grafico": "estadísticas",
 }
 
