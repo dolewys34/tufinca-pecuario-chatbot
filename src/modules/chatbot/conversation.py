@@ -36,6 +36,11 @@ def _historial(session_id: str) -> list[dict]:
 
 
 def _recordar(session_id: str, rol: str, contenido: str) -> None:
+    # Evita crecimiento sin límite: si hay demasiadas sesiones, purgamos las
+    # más antiguas (dict conserva orden de inserción).
+    if len(_SESIONES) > 500 and session_id not in _SESIONES:
+        for viejo in list(_SESIONES)[:100]:
+            _SESIONES.pop(viejo, None)
     s = _SESIONES.setdefault(session_id, {})
     hist = s.setdefault("historial", [])
     hist.append({"role": rol, "content": contenido})
@@ -107,14 +112,19 @@ def procesar(db: Session, mensaje: str, session_id: str) -> schemas.ChatResponse
 
     # 4) Todo lo demás (texto libre) → AGENTE con herramientas (si Azure está activo).
     if settings.azure_enabled:
-        historial = list(_historial(session_id))
-        respuesta, herramientas, graficos = agent.responder_agente(db, texto, historial)
-        _recordar(session_id, "user", texto)
-        _recordar(session_id, "assistant", respuesta)
-        return _respuesta(
-            respuesta, motor="azure-ai-foundry", graficos=graficos,
-            herramientas=herramientas, opciones=_menu_opciones(),
-        )
+        try:
+            historial = list(_historial(session_id))
+            respuesta, herramientas, graficos = agent.responder_agente(db, texto, historial)
+            _recordar(session_id, "user", texto)
+            _recordar(session_id, "assistant", respuesta)
+            return _respuesta(
+                respuesta, motor="azure-ai-foundry", graficos=graficos,
+                herramientas=herramientas, opciones=_menu_opciones(),
+            )
+        except Exception:
+            # Si Azure falla (red, cuota, servicio), degradamos al motor de
+            # reglas en vez de devolver un error 500 al usuario.
+            pass
 
     # 5) Sin Azure → motor de reglas de respaldo.
     respuesta, motor, graficos = ai_service.responder(db, texto)
