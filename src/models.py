@@ -215,6 +215,24 @@ class ManoObra(Base):
     Cuenta_Credito_Id: Mapped[int | None] = mapped_column(default=None)
 
 
+class UsoIA(Base):
+    """Registro del consumo del modelo de IA (Azure AI Foundry).
+
+    Tabla de apoyo de la aplicación (no pertenece al esquema Countryland). Se
+    inserta una fila por cada consulta al modelo, con los tokens consumidos.
+    Permite mostrar la analítica de uso dentro de la app en tiempo real.
+    """
+
+    __tablename__ = "Uso_IA"
+
+    Id_Uso: Mapped[int] = mapped_column(primary_key=True)
+    Fecha: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    modelo: Mapped[str] = mapped_column(String(60), default="")
+    prompt_tokens: Mapped[int] = mapped_column(default=0)
+    completion_tokens: Mapped[int] = mapped_column(default=0)
+    total_tokens: Mapped[int] = mapped_column(default=0)
+
+
 class Inventario(Base):
     """Stock de un producto."""
 

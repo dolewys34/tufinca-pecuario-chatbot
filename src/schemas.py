@@ -127,6 +127,25 @@ class Grafico(BaseModel):
     datos: list[PuntoGrafico]
 
 
+# ---------- Analítica de IA (Azure AI Foundry) ----------
+class PuntoUsoDia(BaseModel):
+    fecha: str
+    tokens: int
+    llamadas: int
+
+
+class IAEstadisticas(BaseModel):
+    conectado: bool
+    modelo: str
+    endpoint: str                 # solo el host, sin la clave
+    total_llamadas: int
+    total_tokens: int
+    prompt_tokens: int
+    completion_tokens: int
+    costo_estimado_usd: float
+    por_dia: list[PuntoUsoDia]
+
+
 # ---------- Chatbot ----------
 class OpcionChat(BaseModel):
     """Botón de respuesta rápida que el usuario puede pulsar."""

@@ -4,9 +4,10 @@ import type { Animal, Dashboard } from "./types";
 import { DashboardView } from "./components/DashboardView";
 import { InventarioView } from "./components/InventarioView";
 import { InsumosView } from "./components/InsumosView";
+import { IAPanelView } from "./components/IAPanelView";
 import { ChatWidget } from "./components/ChatWidget";
 
-type Vista = "dashboard" | "inventario" | "insumos";
+type Vista = "dashboard" | "inventario" | "insumos" | "ia";
 
 export default function App() {
   const [vista, setVista] = useState<Vista>("dashboard");
@@ -74,6 +75,13 @@ export default function App() {
         >
           📦 <span>Insumos</span>
         </button>
+        <button
+          type="button"
+          className={`nav-item ${vista === "ia" ? "activo" : ""}`}
+          onClick={() => setVista("ia")}
+        >
+          🤖 <span>Panel de IA</span>
+        </button>
 
         <div className="sidebar-foot">
           <div className={`ia-badge ${iaOn ? "on" : "off"}`}>
@@ -95,6 +103,7 @@ export default function App() {
           <InventarioView animales={animales} onCambio={cargar} />
         )}
         {!cargando && vista === "insumos" && <InsumosView />}
+        {!cargando && vista === "ia" && <IAPanelView />}
       </main>
 
       <ChatWidget />

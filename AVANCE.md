@@ -142,6 +142,17 @@ la IA real:
 
 ## 6. Historial de cambios
 
+### Iteración 6 — 2026-07-06 (Panel de IA / analítica de Foundry en la app)
+- **Nueva vista "🤖 Panel de IA"**: muestra el consumo del modelo de Azure AI
+  Foundry en tiempo real (consultas, tokens de entrada/salida, costo estimado y
+  gráfico de tokens por día). Se actualiza cada 10 s.
+- **Tabla de apoyo `Uso_IA`**: registra los tokens de cada consulta al modelo
+  (capturados de `response.usage`). La analítica es inmediata, sin la demora de
+  las métricas de Azure Monitor.
+- Endpoint nuevo: `/api/ia/estadisticas`.
+- Nota: la analítica *oficial* de facturación sigue en el portal de Azure
+  (Cost Management / Metrics del recurso `tufinca-foundry-19888`).
+
 ### Iteración 5 — 2026-07-06 (IA de Azure conectada + integración final)
 - **Azure AI Foundry conectado y funcional**: recurso `tufinca-foundry-19888`,
   modelo **gpt-4.1-mini** (GlobalStandard). El agente responde con datos reales

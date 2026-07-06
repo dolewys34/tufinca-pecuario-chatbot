@@ -138,4 +138,21 @@ def _responder_azure(db: Session, mensaje: str) -> str:
         temperature=0.3,
         max_tokens=500,
     )
+    _registrar_uso(db, respuesta.usage)
     return respuesta.choices[0].message.content or "No pude generar una respuesta."
+
+
+def _registrar_uso(db: Session, usage) -> None:
+    """Guarda los tokens consumidos por la consulta (para la analítica en la app)."""
+    if usage is None:
+        return
+    try:
+        db.add(models.UsoIA(
+            modelo=settings.azure_openai_deployment,
+            prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+            completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+            total_tokens=getattr(usage, "total_tokens", 0) or 0,
+        ))
+        db.commit()
+    except Exception:  # pragma: no cover - no debe romper la respuesta al usuario
+        db.rollback()

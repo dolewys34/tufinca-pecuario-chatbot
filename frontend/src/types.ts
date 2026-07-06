@@ -77,6 +77,24 @@ export interface Grafico {
   datos: PuntoGrafico[];
 }
 
+export interface PuntoUsoDia {
+  fecha: string;
+  tokens: number;
+  llamadas: number;
+}
+
+export interface IAEstadisticas {
+  conectado: boolean;
+  modelo: string;
+  endpoint: string;
+  total_llamadas: number;
+  total_tokens: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  costo_estimado_usd: number;
+  por_dia: PuntoUsoDia[];
+}
+
 export interface OpcionChat {
   texto: string;
   valor: string;

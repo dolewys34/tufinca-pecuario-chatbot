@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from src import schemas
 from src.config import settings
 from src.database import get_db, init_db
-from src.modules.chatbot import conversation
+from src.modules.chatbot import analitica, conversation
 from src.modules.pecuario import service
 
 
@@ -150,3 +150,9 @@ def registrar_detalle(
 @app.post("/api/chat", response_model=schemas.ChatResponse)
 def chat(datos: schemas.ChatRequest, db: Session = Depends(get_db)):
     return conversation.procesar(db, datos.mensaje, datos.session_id)
+
+
+# ---------- Analítica de IA (Azure AI Foundry) ----------
+@app.get("/api/ia/estadisticas", response_model=schemas.IAEstadisticas)
+def ia_estadisticas(db: Session = Depends(get_db)):
+    return analitica.estadisticas_ia(db)
