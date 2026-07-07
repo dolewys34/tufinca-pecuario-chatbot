@@ -1,4 +1,4 @@
-import type { Animal, AnimalCreate, Catalogo, ChatResponse, Dashboard, IAEstadisticas, Producto, ProductoCreate } from "./types";
+import type { Alerta, Animal, AnimalCreate, Catalogo, ChatResponse, Dashboard, IAEstadisticas, Producto, ProductoCreate } from "./types";
 
 async function req<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -28,10 +28,11 @@ export const api = {
   listarProductos: () => req<Producto[]>("/api/productos"),
   crearProducto: (datos: ProductoCreate) =>
     req<Producto>("/api/productos", { method: "POST", body: JSON.stringify(datos) }),
+  alertas: () => req<Alerta[]>("/api/alertas"),
   iaEstadisticas: () => req<IAEstadisticas>("/api/ia/estadisticas"),
-  chat: (mensaje: string, session_id: string) =>
+  chat: (mensaje: string, session_id: string, imagen?: string | null) =>
     req<ChatResponse>("/api/chat", {
       method: "POST",
-      body: JSON.stringify({ mensaje, session_id }),
+      body: JSON.stringify({ mensaje, session_id, imagen: imagen ?? null }),
     }),
 };

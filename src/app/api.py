@@ -49,6 +49,11 @@ def dashboard(db: Session = Depends(get_db)) -> schemas.DashboardOut:
     return service.construir_dashboard(db)
 
 
+@app.get("/api/alertas", response_model=list[schemas.Alerta])
+def alertas(db: Session = Depends(get_db)):
+    return service.obtener_alertas(db)
+
+
 # ---------- Catálogos ----------
 @app.get("/api/especies", response_model=list[schemas.CatalogoOut])
 def especies(db: Session = Depends(get_db)):
@@ -149,7 +154,7 @@ def registrar_detalle(
 # ---------- Chatbot ----------
 @app.post("/api/chat", response_model=schemas.ChatResponse)
 def chat(datos: schemas.ChatRequest, db: Session = Depends(get_db)):
-    return conversation.procesar(db, datos.mensaje, datos.session_id)
+    return conversation.procesar(db, datos.mensaje, datos.session_id, imagen=datos.imagen)
 
 
 # ---------- Analítica de IA (Azure AI Foundry) ----------

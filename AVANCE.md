@@ -142,6 +142,19 @@ la IA real:
 
 ## 6. Historial de cambios
 
+### Iteración 10 — 2026-07-07 (visión, alertas y control de costos)
+- **📸 Fotos en el chat (visión de Foundry)**: botón 📎 en el chat; la foto se
+  reduce a 1024px y gpt-4.1-mini la analiza (animales, facturas de insumos).
+  Campo `imagen` (data URL) en `/api/chat`.
+- **🔔 Alertas proactivas**: `service.obtener_alertas()` (insumos agotados/bajos,
+  animales sin vacunas) + endpoint `/api/alertas` + banner en el dashboard.
+  El agente usa la misma fuente (`alertas_finca`).
+- **💰 Tope de gasto diario**: `IA_LIMITE_TOKENS_DIA` (por defecto 200.000
+  tokens/día). Al superarlo, el chat degrada a reglas y avisa al usuario.
+- Nuevas herramientas del agente (iteración previa de validación):
+  `actualizar_animal`, `registrar_alimentacion`, `alertas_finca` + regla dura
+  contra el mal uso de herramientas.
+
 ### Iteración 9 — 2026-07-06 (se retira Telegram)
 - **Se eliminó la integración con Telegram** por decisión del proyecto (el bot,
   su configuración en `.env`/`start.sh` y sus pruebas). El chatbot queda como

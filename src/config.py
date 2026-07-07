@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     azure_openai_deployment: str = ""     # nombre del despliegue del modelo
     azure_openai_api_version: str = "2024-10-21"
 
+    # Tope diario de tokens de IA (control de costos). 200k tokens/día en
+    # gpt-4.1-mini son centavos; sube o baja según necesites. 0 = sin límite.
+    ia_limite_tokens_dia: int = 200_000
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

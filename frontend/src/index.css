@@ -195,6 +195,22 @@ tr:hover td { background: #fafbfa; }
   font-size: 0.7rem; color: var(--verde-700); background: var(--verde-100);
   border-radius: 8px; padding: 0.3rem 0.5rem; margin-bottom: 0.5rem; font-weight: 600;
 }
+/* ---------- Fotos en el chat ---------- */
+.oculto { display: none; }
+.foto-chat { max-width: 100%; border-radius: 10px; margin-bottom: 0.4rem; display: block; }
+.foto-preview {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0.8rem; background: var(--verde-100); border-top: 1px solid var(--border);
+  font-size: 0.8rem; color: var(--verde-700);
+}
+.foto-preview img { width: 42px; height: 42px; object-fit: cover; border-radius: 8px; }
+.foto-preview button { margin-left: auto; background: transparent; color: var(--texto-suave); font-size: 1.2rem; padding: 0 0.4rem; }
+.chat-input .adjuntar {
+  background: var(--verde-100); color: var(--verde-700); width: 44px; height: 44px;
+  border-radius: 50%; flex-shrink: 0; font-size: 1.05rem; display: grid; place-items: center;
+}
+.chat-input .adjuntar:hover { background: #d3ead9; }
+
 .chat-input { display: flex; gap: 0.5rem; padding: 0.8rem; border-top: 1px solid var(--border); background: var(--surface); }
 .chat-input input { border-radius: 999px; }
 .chat-input button { background: var(--verde-600); color: #fff; width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; font-size: 1.1rem; display: grid; place-items: center; }
@@ -214,6 +230,13 @@ tr:hover td { background: #fafbfa; }
 .mini-track { background: #dfeae2; border-radius: 999px; height: 9px; overflow: hidden; }
 .mini-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
 .mini-valor { font-size: 0.72rem; font-weight: 700; color: var(--texto); white-space: nowrap; }
+
+/* ---------- Alertas del panel ---------- */
+.panel-alertas { border-left: 4px solid var(--ambar); background: #fffaf0; }
+.lista-alertas { list-style: none; margin: 0; padding: 0; }
+.lista-alertas li { padding: 0.4rem 0; font-size: 0.92rem; border-bottom: 1px dashed var(--border); }
+.lista-alertas li:last-child { border-bottom: none; }
+.btn-ver-mas { background: transparent; color: var(--verde-700); font-size: 0.85rem; padding: 0.5rem 0; text-decoration: underline; }
 
 .empty { text-align: center; color: var(--texto-suave); padding: 2.5rem 1rem; }
 .loading { color: var(--texto-suave); padding: 1.5rem; text-align: center; }

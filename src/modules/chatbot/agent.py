@@ -325,19 +325,7 @@ def _ejecutar_tool(db: Session, nombre: str, args: dict):
         return {"ok": True, "mensaje": f"Alimentación '{detalle_obs}' registrada para {animal.Codigo or animal.Animal}."}, None
 
     if nombre == "alertas_finca":
-        alertas = []
-        for p in service.listar_productos(db):
-            if p.stock == 0:
-                alertas.append({"tipo": "insumo_agotado", "detalle": f"{p.Producto}: sin stock"})
-            elif p.stock <= 10:
-                alertas.append({"tipo": "stock_bajo", "detalle": f"{p.Producto}: quedan {p.stock}"})
-        activos = [a for a in db.scalars(select(models.Animal)).all() if a.Estado == ESTADO_ACTIVO]
-        sin_vacuna = [
-            a for a in activos
-            if not any(d.Tipo_Vacunacion_Id for d in a.detalles)
-        ]
-        for a in sin_vacuna:
-            alertas.append({"tipo": "sin_vacunas", "detalle": f"{a.Codigo or a.Animal} no tiene vacunaciones registradas"})
+        alertas = [a.model_dump() for a in service.obtener_alertas(db)]
         return {"total_alertas": len(alertas), "alertas": alertas}, None
 
     if nombre == "historial_animal":
@@ -378,9 +366,14 @@ def _ejecutar_tool(db: Session, nombre: str, args: dict):
 # Bucle del agente
 # ---------------------------------------------------------------------------
 def responder_agente(
-    db: Session, mensaje: str, historial: list[dict]
+    db: Session, mensaje: str, historial: list[dict], imagen: str | None = None
 ) -> tuple[str, list[str], list[schemas.Grafico]]:
-    """Devuelve (respuesta, herramientas_usadas, graficos)."""
+    """Devuelve (respuesta, herramientas_usadas, graficos).
+
+    Si `imagen` viene (data URL base64), se envía junto al mensaje para que el
+    modelo la analice (visión de gpt-4.1-mini): fotos de animales, facturas de
+    insumos, etc.
+    """
     from openai import AzureOpenAI
 
     client = AzureOpenAI(
@@ -391,7 +384,16 @@ def responder_agente(
 
     messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(historial)
-    messages.append({"role": "user", "content": mensaje})
+    if imagen:
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": mensaje},
+                {"type": "image_url", "image_url": {"url": imagen}},
+            ],
+        })
+    else:
+        messages.append({"role": "user", "content": mensaje})
 
     herramientas_usadas: list[str] = []
     graficos: list[schemas.Grafico] = []

@@ -1,4 +1,12 @@
-import type { Dashboard } from "../types";
+import { useEffect, useState } from "react";
+import { api } from "../api";
+import type { Alerta, Dashboard } from "../types";
+
+const ICONO_ALERTA: Record<string, string> = {
+  insumo_agotado: "🚨",
+  stock_bajo: "⚠️",
+  sin_vacunas: "💉",
+};
 
 function Kpi({ icono, tint, valor, etiqueta }: { icono: string; tint: string; valor: string | number; etiqueta: string }) {
   return (
@@ -34,12 +42,39 @@ function Barras({ titulo, datos }: { titulo: string; datos: [string, number][] }
 }
 
 export function DashboardView({ data }: { data: Dashboard }) {
+  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [verTodas, setVerTodas] = useState(false);
+
+  useEffect(() => {
+    api.alertas().then(setAlertas).catch(() => setAlertas([]));
+  }, []);
+
+  const visibles = verTodas ? alertas : alertas.slice(0, 4);
+
   return (
     <>
       <div className="page-header">
         <h1>Panel de la finca</h1>
         <p>Resumen operativo de la finca El Paraíso · Anzoátegui, Tolima</p>
       </div>
+
+      {alertas.length > 0 && (
+        <div className="panel panel-alertas">
+          <h2>🔔 Alertas pendientes ({alertas.length})</h2>
+          <ul className="lista-alertas">
+            {visibles.map((a, i) => (
+              <li key={i}>
+                <span>{ICONO_ALERTA[a.tipo] ?? "•"}</span> {a.detalle}
+              </li>
+            ))}
+          </ul>
+          {alertas.length > 4 && (
+            <button type="button" className="btn-ver-mas" onClick={() => setVerTodas(!verTodas)}>
+              {verTodas ? "Ver menos" : `Ver las ${alertas.length} alertas`}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="kpi-grid">
         <Kpi icono="🐄" tint="tint-verde" valor={data.total_animales} etiqueta="Animales registrados" />

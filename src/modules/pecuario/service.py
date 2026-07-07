@@ -164,6 +164,23 @@ def construir_dashboard(db: Session) -> schemas.DashboardOut:
     )
 
 
+def obtener_alertas(db: Session) -> list[schemas.Alerta]:
+    """Alertas operativas: insumos agotados/bajos y animales sin vacunas."""
+    alertas: list[schemas.Alerta] = []
+    for p in listar_productos(db):
+        if p.stock == 0:
+            alertas.append(schemas.Alerta(tipo="insumo_agotado", detalle=f"{p.Producto}: sin stock"))
+        elif p.stock <= 10:
+            alertas.append(schemas.Alerta(tipo="stock_bajo", detalle=f"{p.Producto}: quedan {p.stock}"))
+    activos = [a for a in db.scalars(select(models.Animal)).all() if a.Estado == ESTADO_ACTIVO]
+    for a in activos:
+        if not any(d.Tipo_Vacunacion_Id for d in a.detalles):
+            alertas.append(
+                schemas.Alerta(tipo="sin_vacunas", detalle=f"{a.Codigo or a.Animal} no tiene vacunaciones registradas")
+            )
+    return alertas
+
+
 def estadisticas(db: Session) -> dict[str, schemas.Grafico]:
     """Series listas para graficar, indexadas por clave temática."""
     animales = list(db.scalars(select(models.Animal)).all())

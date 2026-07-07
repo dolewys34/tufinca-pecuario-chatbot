@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from src import models, schemas
 from src.config import settings
 from src.models import ESTADO_ACTIVO
-from src.modules.chatbot import agent, ai_service
+from src.modules.chatbot import agent, ai_service, analitica
 from src.modules.pecuario import service
 
 # Estado en memoria por sesión:
@@ -85,9 +85,35 @@ def _num(texto: str) -> float | None:
 # --------------------------------------------------------------------------
 # Punto de entrada
 # --------------------------------------------------------------------------
-def procesar(db: Session, mensaje: str, session_id: str) -> schemas.ChatResponse:
+def procesar(
+    db: Session, mensaje: str, session_id: str, imagen: str | None = None
+) -> schemas.ChatResponse:
     texto = mensaje.strip()
     sesion = _SESIONES.get(session_id)
+
+    # Foto adjunta → directo al agente con visión (requiere Azure activo).
+    if imagen:
+        if not settings.azure_enabled:
+            return _respuesta(
+                "Para analizar fotos necesito el motor de IA (Azure AI Foundry) activo.",
+                opciones=_menu_opciones(),
+            )
+        try:
+            historial = list(_historial(session_id))
+            respuesta, herramientas, graficos = agent.responder_agente(
+                db, texto or "Analiza esta imagen", historial, imagen=imagen
+            )
+            _recordar(session_id, "user", f"{texto} [envió una foto]")
+            _recordar(session_id, "assistant", respuesta)
+            return _respuesta(
+                respuesta, motor="azure-ai-foundry", graficos=graficos,
+                herramientas=herramientas, opciones=_menu_opciones(),
+            )
+        except Exception:
+            return _respuesta(
+                "No pude analizar la imagen en este momento. Intenta de nuevo.",
+                opciones=_menu_opciones(),
+            )
 
     # 1) ¿Hay un flujo guiado activo? Tiene prioridad.
     if sesion and sesion.get("flujo"):
@@ -111,6 +137,15 @@ def procesar(db: Session, mensaje: str, session_id: str) -> schemas.ChatResponse
         return _menu(db)
 
     # 4) Todo lo demás (texto libre) → AGENTE con herramientas (si Azure está activo).
+    if settings.azure_enabled and analitica.limite_diario_alcanzado(db):
+        # Tope diario de tokens alcanzado: respondemos con reglas (sin costo).
+        respuesta = ai_service.Chatbot().responder(texto)
+        graficos = ai_service._detectar_graficos(db, texto)
+        return _respuesta(
+            f"{respuesta}\n\n⚠️ Nota: se alcanzó el límite diario de consultas de IA "
+            "(control de costos). El asistente inteligente vuelve mañana.",
+            motor="reglas", graficos=graficos, opciones=_menu_opciones(),
+        )
     if settings.azure_enabled:
         try:
             historial = list(_historial(session_id))

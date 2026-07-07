@@ -127,6 +127,12 @@ class Grafico(BaseModel):
     datos: list[PuntoGrafico]
 
 
+# ---------- Alertas ----------
+class Alerta(BaseModel):
+    tipo: str      # insumo_agotado | stock_bajo | sin_vacunas
+    detalle: str
+
+
 # ---------- Analítica de IA (Azure AI Foundry) ----------
 class PuntoUsoDia(BaseModel):
     fecha: str
@@ -156,6 +162,9 @@ class OpcionChat(BaseModel):
 class ChatRequest(BaseModel):
     mensaje: str = Field(..., min_length=1)
     session_id: str = "default"
+    # Foto opcional (data URL base64, ej. "data:image/jpeg;base64,..."). El
+    # agente la analiza con la visión de gpt-4.1-mini.
+    imagen: str | None = None
 
 
 class ChatResponse(BaseModel):

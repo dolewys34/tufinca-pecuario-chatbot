@@ -46,12 +46,32 @@ function cargarMensajesGuardados(): ChatMessage[] {
   }
 }
 
+// Reduce la foto a máx. 1024px (JPEG) para ahorrar tokens y ancho de banda.
+function reducirImagen(archivo: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const escala = Math.min(1, 1024 / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * escala);
+      canvas.height = Math.round(img.height * escala);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(archivo);
+  });
+}
+
 export function ChatWidget() {
   const [abierto, setAbierto] = useState(false);
   const [mensajes, setMensajes] = useState<ChatMessage[]>(cargarMensajesGuardados);
   const [texto, setTexto] = useState("");
+  const [foto, setFoto] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // Sesión persistente: sobrevive a recargas de página (la memoria del agente
   // y la conversación no se pierden).
@@ -84,15 +104,20 @@ export function ChatWidget() {
   // `mostrar` es lo que ve el usuario en su burbuja; `mensaje` es lo que se envía
   // al servidor (para opciones con valores internos como "__esp:1").
   async function enviar(mensaje: string, oculto = false, mostrar?: string) {
-    const q = mensaje.trim();
+    const q = mensaje.trim() || (foto ? "Analiza esta imagen" : "");
     if (!q || cargando) return;
+    const imagen = foto;
     setTexto("");
+    setFoto(null);
     if (!oculto) {
-      setMensajes((m) => [...m, { autor: "usuario", texto: mostrar ?? q }]);
+      setMensajes((m) => [
+        ...m,
+        { autor: "usuario", texto: mostrar ?? q, imagen: imagen ?? undefined },
+      ]);
     }
     setCargando(true);
     try {
-      const r = await api.chat(q, sessionId);
+      const r = await api.chat(q, sessionId, imagen);
       setMensajes((m) => [
         ...m,
         {
@@ -150,6 +175,7 @@ export function ChatWidget() {
                   .join(", ")}
               </div>
             )}
+            {m.imagen && <img src={m.imagen} alt="Foto enviada" className="foto-chat" />}
             {texto_formateado(m.texto)}
             {m.graficos && m.graficos.length > 0 && (
               <div className="graficos-chat">
@@ -178,6 +204,14 @@ export function ChatWidget() {
         </div>
       )}
 
+      {foto && (
+        <div className="foto-preview">
+          <img src={foto} alt="Foto adjunta" />
+          <span>Foto lista para enviar</span>
+          <button type="button" onClick={() => setFoto(null)}>×</button>
+        </div>
+      )}
+
       <form
         className="chat-input"
         onSubmit={(e) => {
@@ -186,9 +220,30 @@ export function ChatWidget() {
         }}
       >
         <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          title="Adjuntar foto"
+          aria-label="Adjuntar foto"
+          className="oculto"
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            if (f) setFoto(await reducirImagen(f));
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          className="adjuntar"
+          title="Adjuntar foto (animal, factura...)"
+          onClick={() => fileRef.current?.click()}
+        >
+          📎
+        </button>
+        <input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder="Escribe tu pregunta…"
+          placeholder={foto ? "Describe la foto (opcional)…" : "Escribe tu pregunta…"}
         />
         <button type="submit" disabled={cargando}>
           ➤

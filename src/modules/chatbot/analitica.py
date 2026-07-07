@@ -20,6 +20,25 @@ PRECIO_ENTRADA = 0.40 / 1_000_000
 PRECIO_SALIDA = 1.60 / 1_000_000
 
 
+def tokens_hoy(db: Session) -> int:
+    """Tokens consumidos hoy (para el tope diario de gasto)."""
+    from datetime import date, datetime, time as dtime
+
+    inicio = datetime.combine(date.today(), dtime.min)
+    total = db.scalar(
+        select(func.coalesce(func.sum(models.UsoIA.total_tokens), 0)).where(
+            models.UsoIA.Fecha >= inicio
+        )
+    )
+    return int(total or 0)
+
+
+def limite_diario_alcanzado(db: Session) -> bool:
+    if settings.ia_limite_tokens_dia <= 0:
+        return False
+    return tokens_hoy(db) >= settings.ia_limite_tokens_dia
+
+
 def estadisticas_ia(db: Session) -> schemas.IAEstadisticas:
     filas = list(db.scalars(select(models.UsoIA)).all())
 

@@ -77,6 +77,11 @@ export interface Grafico {
   datos: PuntoGrafico[];
 }
 
+export interface Alerta {
+  tipo: string;
+  detalle: string;
+}
+
 export interface PuntoUsoDia {
   fecha: string;
   tokens: number;
@@ -115,4 +120,5 @@ export interface ChatMessage {
   graficos?: Grafico[];
   opciones?: OpcionChat[];
   herramientas?: string[];
+  imagen?: string; // miniatura (data URL) de la foto enviada
 }
