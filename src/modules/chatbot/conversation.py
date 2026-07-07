@@ -330,6 +330,15 @@ def _flujo_vacuna(db, texto, session_id, sesion) -> schemas.ChatResponse:
         if not texto.startswith("__tipovac:"):
             return _respuesta("Elige el tipo de vacuna 👇")
         datos["Tipo_Vacunacion_Id"] = int(texto.split(":")[1])
+        sesion["paso"] = "responsable"
+        return _respuesta(
+            "¿Quién fue el **responsable** de aplicar la vacuna? (escribe el nombre)",
+            opciones=[Opcion(texto="Omitir", valor="__omitir"),
+                      Opcion(texto="❌ Cancelar", valor="__cancelar")],
+        )
+
+    if paso == "responsable":
+        datos["Responsable"] = None if texto == "__omitir" else texto.strip()
         sesion["paso"] = "costo"
         return _respuesta(
             "¿Cuál fue el **costo** de la vacuna? (ej: 15000)",
@@ -345,6 +354,7 @@ def _flujo_vacuna(db, texto, session_id, sesion) -> schemas.ChatResponse:
             Proceso_Pecuario_Id=proceso.Id_Proceso_Pecuario,
             Tipo_Vacunacion_Id=datos["Tipo_Vacunacion_Id"],
             Costo=datos.get("Costo"),
+            Responsable=datos.get("Responsable"),
             Observaciones="Registrado por el chatbot",
         ))
         _SESIONES.pop(session_id, None)

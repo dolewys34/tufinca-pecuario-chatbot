@@ -4,10 +4,12 @@ import type { Animal, Dashboard } from "./types";
 import { DashboardView } from "./components/DashboardView";
 import { InventarioView } from "./components/InventarioView";
 import { InsumosView } from "./components/InsumosView";
+import { CatalogosView } from "./components/CatalogosView";
+import { IndicadoresView } from "./components/IndicadoresView";
 import { IAPanelView } from "./components/IAPanelView";
 import { ChatWidget } from "./components/ChatWidget";
 
-type Vista = "dashboard" | "inventario" | "insumos" | "ia";
+type Vista = "dashboard" | "inventario" | "insumos" | "catalogos" | "indicadores" | "ia";
 
 export default function App() {
   const [vista, setVista] = useState<Vista>("dashboard");
@@ -77,6 +79,20 @@ export default function App() {
         </button>
         <button
           type="button"
+          className={`nav-item ${vista === "catalogos" ? "activo" : ""}`}
+          onClick={() => setVista("catalogos")}
+        >
+          🗂️ <span>Catálogos</span>
+        </button>
+        <button
+          type="button"
+          className={`nav-item ${vista === "indicadores" ? "activo" : ""}`}
+          onClick={() => setVista("indicadores")}
+        >
+          🎯 <span>Indicadores</span>
+        </button>
+        <button
+          type="button"
           className={`nav-item ${vista === "ia" ? "activo" : ""}`}
           onClick={() => setVista("ia")}
         >
@@ -103,6 +119,8 @@ export default function App() {
           <InventarioView animales={animales} onCambio={cargar} />
         )}
         {!cargando && vista === "insumos" && <InsumosView />}
+        {!cargando && vista === "catalogos" && <CatalogosView />}
+        {!cargando && vista === "indicadores" && <IndicadoresView />}
         {!cargando && vista === "ia" && <IAPanelView />}
       </main>
 

@@ -17,6 +17,11 @@ class CatalogoOut(BaseModel):
     nombre: str
 
 
+class CatalogoCreate(BaseModel):
+    """Entrada genérica para crear/renombrar un ítem de catálogo (RF-22/23/25/26)."""
+    nombre: str = Field(..., min_length=1, max_length=80)
+
+
 class LoteOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     Id_Lote: int
@@ -55,6 +60,10 @@ class AnimalBase(BaseModel):
     Valor: float | None = Field(default=None, ge=0)
     Costo: float | None = Field(default=None, ge=0)
     Observaciones: str | None = None
+    # Fase II (ACA 2, Figura 17)
+    Sexo: str | None = Field(default=None, max_length=10)
+    Peso: float | None = Field(default=None, ge=0)
+    Fecha_Nacimiento: datetime | None = None
 
 
 class AnimalCreate(AnimalBase):
@@ -67,6 +76,9 @@ class AnimalUpdate(BaseModel):
     Costo: float | None = Field(default=None, ge=0)
     Estado: str | None = Field(default=None, max_length=1)
     Observaciones: str | None = None
+    Sexo: str | None = Field(default=None, max_length=10)
+    Peso: float | None = Field(default=None, ge=0)
+    Fecha_Nacimiento: datetime | None = None
 
 
 class AnimalOut(AnimalBase):
@@ -89,6 +101,10 @@ class DetalleAnimalCreate(BaseModel):
     Valor: float | None = Field(default=None, ge=0)
     Costo: float | None = Field(default=None, ge=0)
     Observaciones: str | None = None
+    # Fase II (ACA 2, Figura 18): responsable de la actividad y próxima
+    # aplicación (se persiste en Fecha_Fin).
+    Responsable: str | None = Field(default=None, max_length=100)
+    Fecha_Fin: datetime | None = None
 
 
 class DetalleAnimalOut(DetalleAnimalCreate):
@@ -129,8 +145,21 @@ class Grafico(BaseModel):
 
 # ---------- Alertas ----------
 class Alerta(BaseModel):
-    tipo: str      # insumo_agotado | stock_bajo | sin_vacunas
+    tipo: str      # insumo_agotado | stock_bajo | sin_vacunas | vacuna_proxima | vacuna_vencida
     detalle: str
+
+
+# ---------- Indicadores del Objetivo 4 (ACA 2, Tabla 16) ----------
+class IndicadoresOut(BaseModel):
+    """Indicadores de trazabilidad y eficiencia para la evaluación comparativa."""
+    total_animales: int
+    total_eventos: int
+    registros_completos_pct: float      # % de animales con todos los datos clave
+    animales_con_historial_pct: float   # disponibilidad del historial
+    eventos_con_responsable_pct: float  # trazabilidad del responsable
+    vacunas_al_dia: int
+    vacunas_proximas: int               # próximas 30 días
+    vacunas_vencidas: int
 
 
 # ---------- Analítica de IA (Azure AI Foundry) ----------

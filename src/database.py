@@ -32,7 +32,35 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Crea las tablas si no existen."""
+    """Crea las tablas si no existen y aplica migraciones ligeras."""
     from src import models  # noqa: F401  (registra los modelos)
 
     Base.metadata.create_all(bind=engine)
+    _migrar_columnas()
+
+
+def _migrar_columnas() -> None:
+    """Agrega columnas nuevas a tablas existentes (SQLite, sin perder datos).
+
+    Extensiones de la Fase II (documento ACA 2): sexo/peso/fecha de nacimiento
+    del animal y responsable del evento.
+    """
+    from sqlalchemy import inspect, text
+
+    pendientes = {
+        "Animales": [
+            ("Sexo", "VARCHAR(10)"),
+            ("Peso", "FLOAT"),
+            ("Fecha_Nacimiento", "DATETIME"),
+        ],
+        "Detalle_Animal": [("Responsable", "VARCHAR(100)")],
+    }
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for tabla, columnas in pendientes.items():
+            if tabla not in inspector.get_table_names():
+                continue
+            existentes = {c["name"] for c in inspector.get_columns(tabla)}
+            for nombre, tipo in columnas:
+                if nombre not in existentes:
+                    conn.execute(text(f'ALTER TABLE "{tabla}" ADD COLUMN "{nombre}" {tipo}'))

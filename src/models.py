@@ -105,6 +105,12 @@ class Animal(Base):
     Codigo: Mapped[str | None] = mapped_column(String(50), default=None, index=True)
     Cuenta_Debito_Id: Mapped[int | None] = mapped_column(default=None)
     Cuenta_Credito_Id: Mapped[int | None] = mapped_column(default=None)
+    # Extensión Fase II (ACA 2, Figura 17): datos indispensables según el
+    # trabajo de campo — 100% de los participantes exigió sexo, peso y
+    # fecha de nacimiento.
+    Sexo: Mapped[str | None] = mapped_column(String(10), default=None)       # M / H
+    Peso: Mapped[float | None] = mapped_column(Float, default=None)          # kg
+    Fecha_Nacimiento: Mapped[datetime | None] = mapped_column(DateTime, default=None)
 
     especie: Mapped[Especie] = relationship(back_populates="animales")
     raza: Mapped[Raza] = relationship(back_populates="animales")
@@ -141,7 +147,11 @@ class DetalleAnimal(Base):
     Observaciones: Mapped[str | None] = mapped_column(String, default=None)
     Usuario_Id: Mapped[int | None] = mapped_column(default=None)
     Fecha_Inicio: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now())
+    # Fecha_Fin se usa como "próxima aplicación" en vacunaciones (ACA 2, Fig. 18).
     Fecha_Fin: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    # Extensión Fase II (ACA 2, Figura 18): el 100% de los participantes exigió
+    # registrar el responsable de la actividad.
+    Responsable: Mapped[str | None] = mapped_column(String(100), default=None)
 
     animal: Mapped[Animal] = relationship(back_populates="detalles")
     proceso: Mapped[ProcesoPecuario] = relationship(back_populates="detalles")

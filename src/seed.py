@@ -100,26 +100,31 @@ def seed() -> None:
         esp = {e.Especie: e.Id_Especie for e in especies}
         rz = {r.Raza: r.Id_Raza for r in razas}
 
-        def animal(nombre, codigo, especie, raza, avaluo, valor, costo, estado=ESTADO_ACTIVO):
+        from datetime import datetime
+
+        def animal(nombre, codigo, especie, raza, avaluo, valor, costo,
+                   sexo=None, peso=None, nacimiento=None, estado=ESTADO_ACTIVO):
             return models.Animal(
                 Animal=nombre, Codigo=codigo, Especie_Id=esp[especie], Raza_Id=rz[raza],
                 Avaluo=avaluo, Valor=valor, Costo=costo, Estado=estado,
+                Sexo=sexo, Peso=peso,
+                Fecha_Nacimiento=datetime.fromisoformat(nacimiento) if nacimiento else None,
             )
 
-        # --- Animales ---
+        # --- Animales (con sexo, peso y nacimiento: ACA 2, Figura 17) ---
         animales = [
-            animal("Vaca 001", "BOV-001", "Bovino", "Brahman", 2500000, 2800000, 1900000),
-            animal("Vaca 002", "BOV-002", "Bovino", "Gyr", 2700000, 3000000, 2100000),
-            animal("Toro 003", "BOV-003", "Bovino", "Brahman", 3500000, 4000000, 2600000),
-            animal("Vaca 004", "BOV-004", "Bovino", "Holstein", 3200000, 3600000, 2400000),
-            animal("Novillo 005", "BOV-005", "Bovino", "Normando", 2200000, 2500000, 1700000),
-            animal("Cerdo 010", "POR-010", "Porcino", "Landrace", 600000, 700000, 450000),
-            animal("Cerda 011", "POR-011", "Porcino", "Yorkshire", 580000, 680000, 430000),
-            animal("Cerdo 012", "POR-012", "Porcino", "Landrace", 610000, 720000, 460000),
-            animal("Gallina 100", "AVE-100", "Avícola", "Ponedora", 25000, 30000, 18000),
-            animal("Gallina 101", "AVE-101", "Avícola", "Ponedora", 25000, 30000, 18000),
-            animal("Cabra 200", "CAP-200", "Caprino", "Criolla", 350000, 420000, 260000),
-            animal("Yegua 300", "EQU-300", "Equino", "Criolla", 4500000, 5000000, 3200000),
+            animal("Vaca 001", "BOV-001", "Bovino", "Brahman", 2500000, 2800000, 1900000, "H", 380, "2021-03-15"),
+            animal("Vaca 002", "BOV-002", "Bovino", "Gyr", 2700000, 3000000, 2100000, "H", 420, "2020-08-02"),
+            animal("Toro 003", "BOV-003", "Bovino", "Brahman", 3500000, 4000000, 2600000, "M", 510, "2019-11-20"),
+            animal("Vaca 004", "BOV-004", "Bovino", "Holstein", 3200000, 3600000, 2400000, "H", 450, "2021-01-10"),
+            animal("Novillo 005", "BOV-005", "Bovino", "Normando", 2200000, 2500000, 1700000, "M", 320, "2023-05-25"),
+            animal("Cerdo 010", "POR-010", "Porcino", "Landrace", 600000, 700000, 450000, "M", 120, "2024-02-14"),
+            animal("Cerda 011", "POR-011", "Porcino", "Yorkshire", 580000, 680000, 430000, "H", 110, "2024-03-01"),
+            animal("Cerdo 012", "POR-012", "Porcino", "Landrace", 610000, 720000, 460000, "M", 125, "2024-01-20"),
+            animal("Gallina 100", "AVE-100", "Avícola", "Ponedora", 25000, 30000, 18000, "H", 2, "2025-06-11"),
+            animal("Gallina 101", "AVE-101", "Avícola", "Ponedora", 25000, 30000, 18000, "H", 2, "2025-06-11"),
+            animal("Cabra 200", "CAP-200", "Caprino", "Criolla", 350000, 420000, 260000, "H", 45, "2023-09-05"),
+            animal("Yegua 300", "EQU-300", "Equino", "Criolla", 4500000, 5000000, 3200000, "H", 400, "2018-04-30"),
         ]
         db.add_all(animales)
         db.flush()

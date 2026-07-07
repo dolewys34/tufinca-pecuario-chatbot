@@ -2,12 +2,52 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src import models, schemas
 from src.models import ESTADO_ACTIVO
+
+# Catálogos genéricos (RF-22/23/25/26): modelo, columna PK y columna nombre.
+CATALOGOS = {
+    "especies": (models.Especie, "Id_Especie", "Especie"),
+    "razas": (models.Raza, "Id_Raza", "Raza"),
+    "tipos-vacunacion": (models.TipoVacunacion, "id_Tipo_Vacunacion", "Tipo_Vacunacion"),
+    "procesos-pecuarios": (models.ProcesoPecuario, "Id_Proceso_Pecuario", "Proceso_Pecuario"),
+}
+
+
+def crear_catalogo(db: Session, clave: str, nombre: str) -> schemas.CatalogoOut:
+    modelo, pk, campo = CATALOGOS[clave]
+    existente = db.scalars(select(modelo).where(getattr(modelo, campo) == nombre)).first()
+    if existente:
+        raise ValueError(f"'{nombre}' ya existe.")
+    fila = modelo(**{campo: nombre, "Estado": ESTADO_ACTIVO})
+    db.add(fila)
+    db.commit()
+    db.refresh(fila)
+    return schemas.CatalogoOut(id=getattr(fila, pk), nombre=getattr(fila, campo))
+
+
+def renombrar_catalogo(db: Session, clave: str, item_id: int, nombre: str) -> schemas.CatalogoOut:
+    modelo, pk, campo = CATALOGOS[clave]
+    fila = db.get(modelo, item_id)
+    if not fila:
+        raise LookupError("No existe.")
+    setattr(fila, campo, nombre)
+    db.commit()
+    return schemas.CatalogoOut(id=getattr(fila, pk), nombre=nombre)
+
+
+def eliminar_catalogo(db: Session, clave: str, item_id: int) -> None:
+    modelo, _, _ = CATALOGOS[clave]
+    fila = db.get(modelo, item_id)
+    if not fila:
+        raise LookupError("No existe.")
+    db.delete(fila)
+    db.commit()
 
 
 # ---------- Catálogos ----------
@@ -114,6 +154,21 @@ def eliminar_animal(db: Session, animal: models.Animal) -> None:
 
 
 # ---------- Detalle de animal (eventos) ----------
+def _detalle_salida(detalle: models.DetalleAnimal) -> schemas.DetalleAnimalOut:
+    salida = schemas.DetalleAnimalOut.model_validate(detalle)
+    salida.proceso_nombre = detalle.proceso.Proceso_Pecuario if detalle.proceso else None
+    salida.tipo_vacunacion_nombre = (
+        detalle.tipo_vacunacion.Tipo_Vacunacion if detalle.tipo_vacunacion else None
+    )
+    salida.producto_nombre = detalle.producto.Producto if detalle.producto else None
+    return salida
+
+
+def historial_animal(db: Session, animal: models.Animal) -> list[schemas.DetalleAnimalOut]:
+    """Historial completo de eventos de un animal (RF-27, Tabla 22)."""
+    return [_detalle_salida(d) for d in animal.detalles]
+
+
 def agregar_detalle(
     db: Session, animal: models.Animal, datos: schemas.DetalleAnimalCreate
 ) -> schemas.DetalleAnimalOut:
@@ -123,13 +178,7 @@ def agregar_detalle(
     db.add(detalle)
     db.commit()
     db.refresh(detalle)
-    salida = schemas.DetalleAnimalOut.model_validate(detalle)
-    salida.proceso_nombre = detalle.proceso.Proceso_Pecuario if detalle.proceso else None
-    salida.tipo_vacunacion_nombre = (
-        detalle.tipo_vacunacion.Tipo_Vacunacion if detalle.tipo_vacunacion else None
-    )
-    salida.producto_nombre = detalle.producto.Producto if detalle.producto else None
-    return salida
+    return _detalle_salida(detalle)
 
 
 # ---------- Dashboard / indicadores ----------
@@ -165,8 +214,32 @@ def construir_dashboard(db: Session) -> schemas.DashboardOut:
 
 
 def obtener_alertas(db: Session) -> list[schemas.Alerta]:
-    """Alertas operativas: insumos agotados/bajos y animales sin vacunas."""
+    """Alertas operativas: insumos, vacunas próximas/vencidas y animales sin vacunas."""
     alertas: list[schemas.Alerta] = []
+    ahora = datetime.now()
+    limite = ahora + timedelta(days=30)
+
+    # Vacunas con próxima aplicación (Fecha_Fin) vencida o dentro de 30 días.
+    vacunaciones = db.scalars(
+        select(models.DetalleAnimal).where(
+            models.DetalleAnimal.Tipo_Vacunacion_Id.is_not(None),
+            models.DetalleAnimal.Fecha_Fin.is_not(None),
+        )
+    ).all()
+    for d in vacunaciones:
+        nombre = d.animal.Codigo or d.animal.Animal if d.animal else f"animal {d.Animal_Id}"
+        vacuna = d.tipo_vacunacion.Tipo_Vacunacion if d.tipo_vacunacion else "vacuna"
+        if d.Fecha_Fin < ahora:
+            alertas.append(schemas.Alerta(
+                tipo="vacuna_vencida",
+                detalle=f"{nombre}: {vacuna} vencida desde {d.Fecha_Fin:%Y-%m-%d}",
+            ))
+        elif d.Fecha_Fin <= limite:
+            alertas.append(schemas.Alerta(
+                tipo="vacuna_proxima",
+                detalle=f"{nombre}: {vacuna} programada para {d.Fecha_Fin:%Y-%m-%d}",
+            ))
+
     for p in listar_productos(db):
         if p.stock == 0:
             alertas.append(schemas.Alerta(tipo="insumo_agotado", detalle=f"{p.Producto}: sin stock"))
@@ -179,6 +252,40 @@ def obtener_alertas(db: Session) -> list[schemas.Alerta]:
                 schemas.Alerta(tipo="sin_vacunas", detalle=f"{a.Codigo or a.Animal} no tiene vacunaciones registradas")
             )
     return alertas
+
+
+# ---------- Indicadores del Objetivo 4 (ACA 2, Tabla 16) ----------
+def calcular_indicadores(db: Session) -> schemas.IndicadoresOut:
+    """Indicadores de trazabilidad para la evaluación comparativa (antes/después)."""
+    animales = list(db.scalars(select(models.Animal)).all())
+    eventos = list(db.scalars(select(models.DetalleAnimal)).all())
+    ahora = datetime.now()
+    limite = ahora + timedelta(days=30)
+
+    def completo(a: models.Animal) -> bool:
+        # Datos indispensables según Figura 17: código, sexo, peso, nacimiento, especie y raza.
+        return all([a.Codigo, a.Sexo, a.Peso, a.Fecha_Nacimiento, a.Especie_Id, a.Raza_Id])
+
+    con_historial = [a for a in animales if a.detalles]
+    con_responsable = [e for e in eventos if e.Responsable]
+
+    vacunas = [e for e in eventos if e.Tipo_Vacunacion_Id]
+    vencidas = [e for e in vacunas if e.Fecha_Fin and e.Fecha_Fin < ahora]
+    proximas = [e for e in vacunas if e.Fecha_Fin and ahora <= e.Fecha_Fin <= limite]
+    al_dia = [e for e in vacunas if not e.Fecha_Fin or e.Fecha_Fin > limite]
+
+    pct = lambda parte, todo: round(100 * len(parte) / len(todo), 1) if todo else 0.0
+
+    return schemas.IndicadoresOut(
+        total_animales=len(animales),
+        total_eventos=len(eventos),
+        registros_completos_pct=pct([a for a in animales if completo(a)], animales),
+        animales_con_historial_pct=pct(con_historial, animales),
+        eventos_con_responsable_pct=pct(con_responsable, eventos),
+        vacunas_al_dia=len(al_dia),
+        vacunas_proximas=len(proximas),
+        vacunas_vencidas=len(vencidas),
+    )
 
 
 def estadisticas(db: Session) -> dict[str, schemas.Grafico]:

@@ -321,6 +321,49 @@ tr:hover td { background: #fafbfa; }
 .lista-alertas li:last-child { border-bottom: none; }
 .btn-ver-mas { background: transparent; color: var(--verde-700); font-size: 0.85rem; padding: 0.5rem 0; text-decoration: underline; }
 
+/* ---------- Ficha del animal (modal) ---------- */
+.modal-fondo {
+  position: fixed; inset: 0; z-index: 60; background: rgba(20,53,31,.45);
+  display: grid; place-items: center; padding: 1.5rem;
+}
+.modal-ficha {
+  background: var(--surface); border-radius: 18px; padding: 1.5rem;
+  width: min(760px, 100%); max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 24px 70px rgba(20,53,31,.35);
+  animation: chat-entrada .18s ease-out;
+}
+.ficha-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.ficha-head h2 { margin: 0; font-size: 1.2rem; }
+.cerrar-ficha { background: var(--verde-100); color: var(--verde-700); width: 34px; height: 34px; border-radius: 50%; font-size: 1.2rem; }
+.ficha-datos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.7rem; margin-bottom: 1.25rem;
+}
+.ficha-datos div { background: #f2f7f3; border-radius: 10px; padding: 0.6rem 0.8rem; }
+.ficha-datos span { display: block; font-size: 0.7rem; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .03em; }
+.ficha-datos b { font-size: 0.95rem; }
+.modal-ficha h3 { margin: 0 0 0.75rem; font-size: 1rem; }
+.fila-clic { cursor: pointer; }
+
+/* ---------- Catálogos ---------- */
+.grid-catalogos { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; }
+.rf-tag { font-size: 0.68rem; background: var(--verde-100); color: var(--verde-700); border-radius: 999px; padding: 0.15rem 0.55rem; vertical-align: middle; margin-left: 0.4rem; }
+.fila-agregar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.fila-agregar .btn { flex-shrink: 0; }
+.lista-catalogo { list-style: none; margin: 0; padding: 0; }
+.lista-catalogo li { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.25rem; border-bottom: 1px dashed var(--border); font-size: 0.92rem; }
+.lista-catalogo li:last-child { border-bottom: none; }
+.lista-catalogo .acciones { display: flex; gap: 0.2rem; }
+
+/* ---------- Indicadores (Objetivo 4) ---------- */
+.grid-medidores { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+.medidor { text-align: center; }
+.medidor-valor { font-size: 2.3rem; font-weight: 800; margin-bottom: 0.5rem; }
+.medidor .barra-track { margin-bottom: 0.7rem; }
+.medidor-etiqueta { font-size: 0.95rem; }
+.medidor-meta { font-size: 0.78rem; color: var(--texto-suave); margin-top: 0.3rem; }
+.nota-metodo { font-size: 0.85rem; color: var(--texto-suave); }
+
 .empty { text-align: center; color: var(--texto-suave); padding: 2.5rem 1rem; }
 .loading { color: var(--texto-suave); padding: 1.5rem; text-align: center; }
 .error-banner { background: #fbe0e0; color: var(--rojo); padding: 0.8rem 1rem; border-radius: 10px; margin-bottom: 1rem; font-size: 0.88rem; }

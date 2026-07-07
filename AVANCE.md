@@ -142,6 +142,35 @@ la IA real:
 
 ## 6. Historial de cambios
 
+### Iteración 11 — 2026-07-07 (alineación con el documento ACA 2 / tesis Fase II)
+Se validó el desarrollo contra el documento **"ACA 2 Especialización en
+Transformación digital corregida"** (tesis TuFinca Fase II) y se implementó lo
+que faltaba:
+
+- **Figura 17 (datos indispensables del animal)**: nuevos campos `Sexo`, `Peso`
+  y `Fecha_Nacimiento` en Animales (migración sin pérdida de datos), en el
+  formulario web, la tabla y el agente.
+- **Figura 18 (registro de vacunación)**: campo `Responsable` en Detalle_Animal
+  y **próxima aplicación** (Fecha_Fin). El flujo de botones y el agente lo piden;
+  las alertas ahora incluyen **vacunas próximas y vencidas**.
+- **RF-22/23/25/26 (CRUD de catálogos)**: endpoints
+  POST/PATCH/DELETE `/api/catalogos/{clave}` + nueva vista **🗂️ Catálogos**
+  (especies, razas, tipos de vacunación, procesos pecuarios).
+- **RF-27 / Tabla 22**: endpoint `GET /api/animales/{id}/detalle` + **ficha del
+  animal** en la web (clic en la fila → datos completos + historial de eventos).
+- **Tabla 21 (intenciones)**: nueva herramienta del agente `registrar_proceso`
+  (reproducción, pesaje, desparasitación, etc.) — el agente ya cubre las 7
+  intenciones conversacionales del documento.
+- **Tabla 16 (Objetivo 4)**: endpoint `/api/indicadores` + nueva vista
+  **🎯 Indicadores** con % de registros completos, disponibilidad del historial,
+  eventos con responsable y estado de vacunas (evaluación comparativa).
+
+Notas de alineación: el documento describe la arquitectura original .NET/SQL
+Server de la Fase I; esta implementación usa FastAPI/SQLite manteniendo el mismo
+esquema de datos (Countryland) y los mismos contratos funcionales. El canal de
+mensajería (Obj. 3) se cubre con el chat web; Telegram se retiró a pedido del
+usuario y WhatsApp queda como etapa futura, tal como lo plantea el documento.
+
 ### Iteración 10 — 2026-07-07 (visión, alertas y control de costos)
 - **📸 Fotos en el chat (visión de Foundry)**: botón 📎 en el chat; la foto se
   reduce a 1024px y gpt-4.1-mini la analiza (animales, facturas de insumos).

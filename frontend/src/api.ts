@@ -1,4 +1,4 @@
-import type { Alerta, Animal, AnimalCreate, Catalogo, ChatResponse, Dashboard, IAEstadisticas, Producto, ProductoCreate } from "./types";
+import type { Alerta, Animal, AnimalCreate, Catalogo, ChatResponse, Dashboard, DetalleAnimal, IAEstadisticas, Indicadores, Producto, ProductoCreate } from "./types";
 
 async function req<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -29,6 +29,16 @@ export const api = {
   crearProducto: (datos: ProductoCreate) =>
     req<Producto>("/api/productos", { method: "POST", body: JSON.stringify(datos) }),
   alertas: () => req<Alerta[]>("/api/alertas"),
+  indicadores: () => req<Indicadores>("/api/indicadores"),
+  historialAnimal: (id: number) => req<DetalleAnimal[]>(`/api/animales/${id}/detalle`),
+  // CRUD de catálogos (RF-22/23/25/26)
+  catalogo: (clave: string) => req<Catalogo[]>(`/api/${clave}`),
+  crearCatalogo: (clave: string, nombre: string) =>
+    req<Catalogo>(`/api/catalogos/${clave}`, { method: "POST", body: JSON.stringify({ nombre }) }),
+  renombrarCatalogo: (clave: string, id: number, nombre: string) =>
+    req<Catalogo>(`/api/catalogos/${clave}/${id}`, { method: "PATCH", body: JSON.stringify({ nombre }) }),
+  eliminarCatalogo: (clave: string, id: number) =>
+    req<void>(`/api/catalogos/${clave}/${id}`, { method: "DELETE" }),
   iaEstadisticas: () => req<IAEstadisticas>("/api/ia/estadisticas"),
   chat: (mensaje: string, session_id: string, imagen?: string | null) =>
     req<ChatResponse>("/api/chat", {

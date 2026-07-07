@@ -27,6 +27,10 @@ async def lifespan(app: FastAPI):
     yield
 
 
+# Inicializa también al importar (los tests no ejecutan el lifespan).
+# Es idempotente: crea tablas/columnas solo si faltan.
+init_db()
+
 app = FastAPI(title=settings.api_title, version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
@@ -52,6 +56,49 @@ def dashboard(db: Session = Depends(get_db)) -> schemas.DashboardOut:
 @app.get("/api/alertas", response_model=list[schemas.Alerta])
 def alertas(db: Session = Depends(get_db)):
     return service.obtener_alertas(db)
+
+
+@app.get("/api/indicadores", response_model=schemas.IndicadoresOut)
+def indicadores(db: Session = Depends(get_db)):
+    """Indicadores de trazabilidad del Objetivo Específico 4 (ACA 2, Tabla 16)."""
+    return service.calcular_indicadores(db)
+
+
+# ---------- CRUD de catálogos (RF-22, RF-23, RF-25, RF-26) ----------
+@app.post("/api/catalogos/{clave}", response_model=schemas.CatalogoOut, status_code=201)
+def crear_item_catalogo(clave: str, datos: schemas.CatalogoCreate, db: Session = Depends(get_db)):
+    if clave not in service.CATALOGOS:
+        raise HTTPException(404, "Catálogo desconocido")
+    try:
+        return service.crear_catalogo(db, clave, datos.nombre.strip())
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
+
+
+@app.patch("/api/catalogos/{clave}/{item_id}", response_model=schemas.CatalogoOut)
+def renombrar_item_catalogo(
+    clave: str, item_id: int, datos: schemas.CatalogoCreate, db: Session = Depends(get_db)
+):
+    if clave not in service.CATALOGOS:
+        raise HTTPException(404, "Catálogo desconocido")
+    try:
+        return service.renombrar_catalogo(db, clave, item_id, datos.nombre.strip())
+    except LookupError:
+        raise HTTPException(404, "Ítem no encontrado")
+
+
+@app.delete("/api/catalogos/{clave}/{item_id}", status_code=204)
+def eliminar_item_catalogo(clave: str, item_id: int, db: Session = Depends(get_db)):
+    if clave not in service.CATALOGOS:
+        raise HTTPException(404, "Catálogo desconocido")
+    try:
+        service.eliminar_catalogo(db, clave, item_id)
+    except LookupError:
+        raise HTTPException(404, "Ítem no encontrado")
+    except Exception:
+        raise HTTPException(
+            409, "No se puede eliminar: hay registros que dependen de este ítem."
+        )
 
 
 # ---------- Catálogos ----------
@@ -137,6 +184,15 @@ def eliminar(animal_id: int, db: Session = Depends(get_db)):
 
 
 # ---------- Detalle de animal (vacunación, alimentación, procesos) ----------
+@app.get("/api/animales/{animal_id}/detalle", response_model=list[schemas.DetalleAnimalOut])
+def historial(animal_id: int, db: Session = Depends(get_db)):
+    """Historial completo del animal (RF-27, Tabla 22 del ACA 2)."""
+    animal = service.obtener_animal(db, animal_id)
+    if not animal:
+        raise HTTPException(404, "Animal no encontrado")
+    return service.historial_animal(db, animal)
+
+
 @app.post(
     "/api/animales/{animal_id}/detalle",
     response_model=schemas.DetalleAnimalOut,

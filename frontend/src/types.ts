@@ -18,6 +18,9 @@ export interface Animal {
   Fecha_Inicio: string;
   Fecha_Fin: string | null;
   Observaciones: string | null;
+  Sexo: string | null;
+  Peso: number | null;
+  Fecha_Nacimiento: string | null;
   especie_nombre: string | null;
   raza_nombre: string | null;
 }
@@ -31,6 +34,34 @@ export interface AnimalCreate {
   Valor?: number | null;
   Costo?: number | null;
   Observaciones?: string | null;
+  Sexo?: string | null;
+  Peso?: number | null;
+  Fecha_Nacimiento?: string | null;
+}
+
+export interface DetalleAnimal {
+  Id_Detalle_Animal: number;
+  Animal_Id: number;
+  Costo: number | null;
+  Valor: number | null;
+  Observaciones: string | null;
+  Responsable: string | null;
+  Fecha_Inicio: string | null;
+  Fecha_Fin: string | null;
+  proceso_nombre: string | null;
+  tipo_vacunacion_nombre: string | null;
+  producto_nombre: string | null;
+}
+
+export interface Indicadores {
+  total_animales: number;
+  total_eventos: number;
+  registros_completos_pct: number;
+  animales_con_historial_pct: number;
+  eventos_con_responsable_pct: number;
+  vacunas_al_dia: number;
+  vacunas_proximas: number;
+  vacunas_vencidas: number;
 }
 
 export interface Producto {

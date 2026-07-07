@@ -108,15 +108,35 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "registrar_vacunacion",
-            "description": "Registra una vacunación para un animal existente (por su código o nombre).",
+            "description": "Registra una vacunación para un animal existente (por su código o nombre). Pregunta por el responsable si el usuario no lo menciona.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "animal": {"type": "string", "description": "Código o nombre del animal"},
                     "tipo_vacuna": {"type": "string", "description": "Tipo de vacuna (ej: Aftosa)"},
                     "costo": {"type": "number", "description": "Costo de la vacuna (opcional)"},
+                    "responsable": {"type": "string", "description": "Persona que aplicó la vacuna"},
+                    "proxima_fecha": {"type": "string", "description": "Próxima aplicación en formato AAAA-MM-DD (opcional)"},
                 },
                 "required": ["animal", "tipo_vacuna"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "registrar_proceso",
+            "description": "Registra cualquier proceso pecuario para un animal: reproducción/inseminación, pesaje, desparasitación, tratamiento, limpieza, producción, venta, etc. (NO vacunación ni alimentación, que tienen su propia herramienta).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "animal": {"type": "string", "description": "Código o nombre del animal"},
+                    "proceso": {"type": "string", "description": "Nombre del proceso (ej: Inseminación, Pesaje, Desparasitación)"},
+                    "costo": {"type": "number", "description": "Costo en pesos (opcional)"},
+                    "responsable": {"type": "string", "description": "Persona que realizó la actividad (opcional)"},
+                    "observaciones": {"type": "string", "description": "Detalle del evento (ej: 'peso 420 kg')"},
+                },
+                "required": ["animal", "proceso"],
             },
         },
     },
@@ -249,6 +269,8 @@ def _ejecutar_tool(db: Session, nombre: str, args: dict):
                 "codigo": a.Codigo, "nombre": a.Animal,
                 "especie": a.especie.Especie if a.especie else None,
                 "raza": a.raza.Raza if a.raza else None,
+                "sexo": a.Sexo, "peso_kg": a.Peso,
+                "nacimiento": a.Fecha_Nacimiento.strftime("%Y-%m-%d") if a.Fecha_Nacimiento else None,
                 "avaluo": a.Avaluo, "valor": a.Valor, "costo": a.Costo,
                 "estado": "activo" if a.Estado == ESTADO_ACTIVO else "inactivo",
             }
@@ -274,27 +296,48 @@ def _ejecutar_tool(db: Session, nombre: str, args: dict):
         return {"ok": True, "id": nuevo.Id_Animal, "mensaje": f"Animal '{nuevo.Animal}' registrado."}, None
 
     if nombre == "registrar_vacunacion":
-        ref = str(args["animal"]).lower()
-        animal = db.scalars(
-            select(models.Animal).where(
-                (func.lower(models.Animal.Codigo) == ref) | (func.lower(models.Animal.Animal) == ref)
-            )
-        ).first()
+        animal = _buscar_animal_por_ref(db, args["animal"])
         if not animal:
             return {"ok": False, "error": f"No encontré un animal con código o nombre '{args['animal']}'."}, None
         tipo = _get_or_create(db, models.TipoVacunacion, "Tipo_Vacunacion", args["tipo_vacuna"])
-        proceso = db.scalars(
-            select(models.ProcesoPecuario).where(models.ProcesoPecuario.Proceso_Pecuario == "Vacunación")
-        ).first()
-        if not proceso:
-            proceso = models.ProcesoPecuario(Proceso_Pecuario="Vacunación", Estado=ESTADO_ACTIVO)
-            db.add(proceso); db.commit(); db.refresh(proceso)
+        proceso = _get_or_create(db, models.ProcesoPecuario, "Proceso_Pecuario", "Vacunación")
+        proxima = None
+        if args.get("proxima_fecha"):
+            try:
+                from datetime import datetime as _dt
+                proxima = _dt.fromisoformat(args["proxima_fecha"])
+            except ValueError:
+                proxima = None
         service.agregar_detalle(db, animal, schemas.DetalleAnimalCreate(
             Proceso_Pecuario_Id=proceso.Id_Proceso_Pecuario,
             Tipo_Vacunacion_Id=tipo.id_Tipo_Vacunacion,
-            Costo=args.get("costo"), Observaciones="Registrado por el agente IA",
+            Costo=args.get("costo"),
+            Responsable=args.get("responsable"),
+            Fecha_Fin=proxima,
+            Observaciones="Registrado por el agente IA",
         ))
-        return {"ok": True, "mensaje": f"Vacunación de {tipo.Tipo_Vacunacion} registrada para {animal.Codigo or animal.Animal}."}, None
+        return {
+            "ok": True,
+            "mensaje": f"Vacunación de {tipo.Tipo_Vacunacion} registrada para {animal.Codigo or animal.Animal}.",
+            "responsable": args.get("responsable"),
+            "proxima_aplicacion": args.get("proxima_fecha"),
+        }, None
+
+    if nombre == "registrar_proceso":
+        animal = _buscar_animal_por_ref(db, args["animal"])
+        if not animal:
+            return {"ok": False, "error": f"No encontré un animal con código o nombre '{args['animal']}'."}, None
+        proceso = _get_or_create(db, models.ProcesoPecuario, "Proceso_Pecuario", args["proceso"])
+        service.agregar_detalle(db, animal, schemas.DetalleAnimalCreate(
+            Proceso_Pecuario_Id=proceso.Id_Proceso_Pecuario,
+            Costo=args.get("costo"),
+            Responsable=args.get("responsable"),
+            Observaciones=args.get("observaciones") or "Registrado por el agente IA",
+        ))
+        return {
+            "ok": True,
+            "mensaje": f"Proceso '{proceso.Proceso_Pecuario}' registrado para {animal.Codigo or animal.Animal}.",
+        }, None
 
     if nombre == "actualizar_animal":
         animal = _buscar_animal_por_ref(db, args["animal"])
@@ -344,6 +387,8 @@ def _ejecutar_tool(db: Session, nombre: str, args: dict):
                 "producto": d.producto.Producto if d.producto else None,
                 "costo": d.Costo,
                 "fecha": d.Fecha_Inicio.strftime("%Y-%m-%d") if d.Fecha_Inicio else None,
+                "responsable": d.Responsable,
+                "proxima_aplicacion": d.Fecha_Fin.strftime("%Y-%m-%d") if d.Fecha_Fin else None,
                 "observaciones": d.Observaciones,
             }
             for d in animal.detalles
