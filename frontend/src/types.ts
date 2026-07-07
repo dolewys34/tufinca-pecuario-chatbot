@@ -121,4 +121,5 @@ export interface ChatMessage {
   opciones?: OpcionChat[];
   herramientas?: string[];
   imagen?: string; // miniatura (data URL) de la foto enviada
+  hora?: string;   // hora local del mensaje (HH:MM)
 }

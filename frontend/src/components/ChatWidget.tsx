@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { ChatMessage } from "../types";
 import { MiniGrafico } from "./MiniGrafico";
@@ -46,6 +46,11 @@ function cargarMensajesGuardados(): ChatMessage[] {
   }
 }
 
+const nuevoIdSesion = () => `web-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+
+const horaActual = () =>
+  new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
 // Reduce la foto a máx. 1024px (JPEG) para ahorrar tokens y ancho de banda.
 function reducirImagen(archivo: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -75,14 +80,24 @@ export function ChatWidget() {
 
   // Sesión persistente: sobrevive a recargas de página (la memoria del agente
   // y la conversación no se pierden).
-  const sessionId = useMemo(() => {
+  const [sessionId, setSessionId] = useState(() => {
     let s = localStorage.getItem(CLAVE_SESION);
     if (!s) {
-      s = `web-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+      s = nuevoIdSesion();
       localStorage.setItem(CLAVE_SESION, s);
     }
     return s;
-  }, []);
+  });
+
+  // Borra la conversación y arranca una sesión nueva (memoria limpia).
+  function nuevaConversacion() {
+    localStorage.removeItem(CLAVE_MENSAJES);
+    const s = nuevoIdSesion();
+    localStorage.setItem(CLAVE_SESION, s);
+    setMensajes([]);
+    setFoto(null);
+    setSessionId(s); // dispara el saludo inicial de nuevo
+  }
 
   // Guarda la conversación (últimos 50 mensajes) al cambiar.
   useEffect(() => {
@@ -93,13 +108,13 @@ export function ChatWidget() {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
   }, [mensajes, cargando]);
 
-  // Al abrir por primera vez, saludamos con el menú.
+  // Al abrir por primera vez (o tras "nueva conversación"), saludamos con el menú.
   useEffect(() => {
     if (abierto && mensajes.length === 0) {
       enviar("hola", true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierto]);
+  }, [abierto, sessionId]);
 
   // `mostrar` es lo que ve el usuario en su burbuja; `mensaje` es lo que se envía
   // al servidor (para opciones con valores internos como "__esp:1").
@@ -112,7 +127,7 @@ export function ChatWidget() {
     if (!oculto) {
       setMensajes((m) => [
         ...m,
-        { autor: "usuario", texto: mostrar ?? q, imagen: imagen ?? undefined },
+        { autor: "usuario", texto: mostrar ?? q, imagen: imagen ?? undefined, hora: horaActual() },
       ]);
     }
     setCargando(true);
@@ -127,12 +142,17 @@ export function ChatWidget() {
           graficos: r.graficos,
           opciones: r.opciones,
           herramientas: r.herramientas,
+          hora: horaActual(),
         },
       ]);
     } catch {
       setMensajes((m) => [
         ...m,
-        { autor: "bot", texto: "Ups, no pude conectar con el servidor. Intenta de nuevo." },
+        {
+          autor: "bot",
+          texto: "Ups, no pude conectar con el servidor. Intenta de nuevo.",
+          hora: horaActual(),
+        },
       ]);
     } finally {
       setCargando(false);
@@ -154,12 +174,22 @@ export function ChatWidget() {
   return (
     <div className="chat-panel">
       <div className="chat-head">
-        <div className="avatar">🐄</div>
+        <div className="avatar">
+          🐄<span className="punto-online" />
+        </div>
         <div>
           <div className="titulo">TuFinca Bot</div>
-          <div className="estado">Asistente agropecuario</div>
+          <div className="estado">En línea · Asistente agropecuario</div>
         </div>
-        <button type="button" className="cerrar" onClick={() => setAbierto(false)}>
+        <button
+          type="button"
+          className="accion-head"
+          title="Nueva conversación"
+          onClick={nuevaConversacion}
+        >
+          🗑
+        </button>
+        <button type="button" className="accion-head cerrar" title="Cerrar" onClick={() => setAbierto(false)}>
           ×
         </button>
       </div>
@@ -184,14 +214,20 @@ export function ChatWidget() {
                 ))}
               </div>
             )}
-            {m.motor && m.motor !== "asistente" && (
-              <span className="motor">
-                {m.motor === "azure-ai-foundry" ? "⚡ IA · Azure AI Foundry" : "⚙️ motor de reglas"}
-              </span>
-            )}
+            <span className="pie-burbuja">
+              {m.motor === "azure-ai-foundry" && <span className="motor">⚡ Azure AI Foundry</span>}
+              {m.motor === "reglas" && <span className="motor">⚙️ reglas</span>}
+              {m.hora && <span className="hora">{m.hora}</span>}
+            </span>
           </div>
         ))}
-        {cargando && <div className="burbuja bot">Escribiendo…</div>}
+        {cargando && (
+          <div className="burbuja bot escribiendo">
+            <span className="punto" />
+            <span className="punto" />
+            <span className="punto" />
+          </div>
+        )}
       </div>
 
       {opcionesActivas.length > 0 && (
