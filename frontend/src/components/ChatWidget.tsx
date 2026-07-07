@@ -17,22 +17,58 @@ const NOMBRE_HERRAMIENTA: Record<string, string> = {
   generar_grafico: "estadísticas",
 };
 
-// Renderiza **negritas** y saltos de línea de forma simple.
+// Renderiza **negritas** dentro de una línea.
+function renderInline(t: string, key?: number) {
+  return t.split(/(\*\*[^*]+\*\*)/g).map((p, j) =>
+    p.startsWith("**") && p.endsWith("**") ? (
+      <strong key={`${key}-${j}`}>{p.slice(2, -2)}</strong>
+    ) : (
+      <span key={`${key}-${j}`}>{p}</span>
+    )
+  );
+}
+
+// Mini-markdown del chat: viñetas (-, *, •, 1.), títulos (#) y negritas,
+// para que las respuestas de la IA se vean organizadas.
 function texto_formateado(texto: string) {
-  return texto.split("\n").map((linea, i) => {
-    const partes = linea.split(/(\*\*[^*]+\*\*)/g);
-    return (
-      <div key={i}>
-        {partes.map((p, j) =>
-          p.startsWith("**") && p.endsWith("**") ? (
-            <strong key={j}>{p.slice(2, -2)}</strong>
-          ) : (
-            <span key={j}>{p}</span>
-          )
-        )}
-      </div>
-    );
+  const lineas = texto.split("\n");
+  const salida: React.ReactNode[] = [];
+  let items: string[] = [];
+
+  const cerrarLista = () => {
+    if (items.length) {
+      salida.push(
+        <ul className="lista-chat" key={`ul-${salida.length}`}>
+          {items.map((li, i) => (
+            <li key={i}>{renderInline(li, i)}</li>
+          ))}
+        </ul>
+      );
+      items = [];
+    }
+  };
+
+  lineas.forEach((linea, i) => {
+    const vineta = linea.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)/);
+    if (vineta) {
+      items.push(vineta[1]);
+      return;
+    }
+    cerrarLista();
+    if (linea.trim() === "") {
+      salida.push(<div className="salto-chat" key={`s-${i}`} />);
+    } else if (/^#{1,4}\s/.test(linea)) {
+      salida.push(
+        <div className="titulo-chat" key={i}>
+          {renderInline(linea.replace(/^#{1,4}\s*/, ""), i)}
+        </div>
+      );
+    } else {
+      salida.push(<div key={i}>{renderInline(linea, i)}</div>);
+    }
   });
+  cerrarLista();
+  return salida;
 }
 
 const CLAVE_SESION = "tufinca-chat-sesion";

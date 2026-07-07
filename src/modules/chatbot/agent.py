@@ -41,6 +41,11 @@ Cómo trabajas:
   correcta y confirma el resultado real que devolvió.
 - Da respuestas en español, claras y breves, útiles para un productor rural.
 - Cuando sea útil, ofrece un análisis o recomendación corta basada en los datos.
+
+Formato de tus respuestas (muy importante):
+- Usa viñetas ("- ") para enumerar animales, insumos, costos o pasos.
+- Resalta con **negritas** las cifras y nombres clave.
+- Separa las secciones con una línea en blanco. Evita párrafos largos.
 """
 
 # ---------------------------------------------------------------------------

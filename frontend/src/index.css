@@ -265,6 +265,14 @@ tr:hover td { background: #fafbfa; }
   font-size: 0.68rem; color: var(--verde-700); background: var(--verde-100);
   border-radius: 8px; padding: 0.3rem 0.55rem; margin-bottom: 0.5rem; font-weight: 600;
 }
+
+/* Formato de las respuestas del bot (mini-markdown) */
+.lista-chat { margin: 0.3rem 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.lista-chat li { line-height: 1.4; }
+.lista-chat li::marker { color: var(--verde-500); }
+.titulo-chat { font-weight: 700; margin: 0.4rem 0 0.15rem; color: var(--verde-700); }
+.burbuja.usuario .titulo-chat { color: #fff; }
+.salto-chat { height: 0.4rem; }
 /* ---------- Fotos en el chat ---------- */
 .oculto { display: none; }
 .foto-chat { max-width: 100%; border-radius: 10px; margin-bottom: 0.4rem; display: block; }
