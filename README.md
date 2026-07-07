@@ -1,5 +1,7 @@
 # 🌾 TuFinca Pecuario + Chatbot IA
 
+> 🌐 **Demo en la nube:** https://tufinca-paraiso-19888.azurewebsites.net
+
 Sistema de información agropecuario para la finca **El Paraíso** (Anzoátegui, Tolima).
 Gestiona el inventario animal, salud, alimentación y costos, e incluye un **chatbot
 inteligente** conectado a **Azure AI Foundry** que responde con datos reales y

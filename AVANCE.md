@@ -142,6 +142,19 @@ la IA real:
 
 ## 6. Historial de cambios
 
+### Iteración 12 — 2026-07-07 (despliegue en la nube: URL pública)
+- **Sistema publicado en Azure App Service**:
+  **https://tufinca-paraiso-19888.azurewebsites.net**
+  (plan F1 gratuito, región centralus, Python 3.13).
+- Una sola app sirve todo: FastAPI monta el build de React (`frontend/dist`)
+  como estáticos — misma URL para interfaz y API.
+- Base de datos SQLite persistente en `/home/tufinca.db` (sobrevive reinicios)
+  con auto-seed si está vacía.
+- Credenciales de Azure AI Foundry configuradas como *app settings*
+  (no viajan en el código).
+- Redespliegue con un comando: `bash scripts/azure_deploy.sh`.
+- Interfaz responsive verificada (sidebar colapsable < 820px, chat adaptable).
+
 ### Iteración 11 — 2026-07-07 (alineación con el documento ACA 2 / tesis Fase II)
 Se validó el desarrollo contra el documento **"ACA 2 Especialización en
 Transformación digital corregida"** (tesis TuFinca Fase II) y se implementó lo

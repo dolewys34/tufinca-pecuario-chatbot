@@ -12,10 +12,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from src import schemas
-from src.config import settings
+from src.config import PROJECT_ROOT, settings
 from src.database import get_db, init_db
 from src.modules.chatbot import analitica, conversation
 from src.modules.pecuario import service
@@ -24,6 +25,12 @@ from src.modules.pecuario import service
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # En la nube: si la base está vacía, carga los datos de demostración.
+    try:
+        from src.seed import seed
+        seed()
+    except Exception:
+        pass
     yield
 
 
@@ -211,6 +218,14 @@ def registrar_detalle(
 @app.post("/api/chat", response_model=schemas.ChatResponse)
 def chat(datos: schemas.ChatRequest, db: Session = Depends(get_db)):
     return conversation.procesar(db, datos.mensaje, datos.session_id, imagen=datos.imagen)
+
+
+# ---------- Frontend (producción) ----------
+# Si existe el build de React (frontend/dist), la API lo sirve también:
+# una sola URL para todo (ideal para el despliegue en Azure App Service).
+_DIST = PROJECT_ROOT / "frontend" / "dist"
+if _DIST.exists():
+    app.mount("/", StaticFiles(directory=_DIST, html=True), name="frontend")
 
 
 # ---------- Analítica de IA (Azure AI Foundry) ----------
