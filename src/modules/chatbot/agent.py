@@ -32,10 +32,13 @@ información pecuaria: inventario animal, insumos, vacunación y costos.
 Cómo trabajas:
 - Tienes HERRAMIENTAS para consultar y registrar datos reales. Úsalas siempre que
   necesites cifras o listados concretos; NUNCA inventes datos.
+- Usa cada herramienta SOLO para su propósito exacto. Si el usuario pide una
+  acción para la que NO tienes herramienta, dilo con honestidad y sugiere cómo
+  hacerlo; NUNCA uses una herramienta distinta para aparentar que lo hiciste.
 - Puedes encadenar varias herramientas para responder (p. ej. buscar animales y
   luego analizarlos).
-- Cuando el usuario pida registrar algo (un animal, una vacunación), hazlo con la
-  herramienta y confirma el resultado.
+- Cuando el usuario pida registrar o actualizar algo, hazlo con la herramienta
+  correcta y confirma el resultado real que devolvió.
 - Da respuestas en español, claras y breves, útiles para un productor rural.
 - Cuando sea útil, ofrece un análisis o recomendación corta basada en los datos.
 """
@@ -115,6 +118,49 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "actualizar_animal",
+            "description": "Actualiza los datos de un animal existente: valor, avalúo, costo o estado (activo/inactivo). NO crea animales nuevos.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "animal": {"type": "string", "description": "Código o nombre del animal a actualizar"},
+                    "valor": {"type": "number", "description": "Nuevo valor comercial (opcional)"},
+                    "avaluo": {"type": "number", "description": "Nuevo avalúo (opcional)"},
+                    "costo": {"type": "number", "description": "Nuevo costo (opcional)"},
+                    "estado": {"type": "string", "enum": ["activo", "inactivo"], "description": "Nuevo estado (opcional)"},
+                },
+                "required": ["animal"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "registrar_alimentacion",
+            "description": "Registra un evento de alimentación para un animal (tipo de alimento, cantidad y costo). NO es una vacunación.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "animal": {"type": "string", "description": "Código o nombre del animal"},
+                    "alimento": {"type": "string", "description": "Tipo de alimento (ej: concentrado, silo de maíz)"},
+                    "cantidad_kg": {"type": "number", "description": "Cantidad en kilogramos (opcional)"},
+                    "costo": {"type": "number", "description": "Costo en pesos (opcional)"},
+                },
+                "required": ["animal", "alimento"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "alertas_finca",
+            "description": "Revisa las alertas pendientes de la finca: insumos agotados o con stock bajo y animales activos sin ninguna vacunación registrada.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "historial_animal",
             "description": "Historial de eventos de un animal (vacunaciones, alimentación, procesos) con fechas y costos. Busca por código o nombre.",
             "parameters": {
@@ -164,6 +210,16 @@ def _get_or_create(db: Session, modelo, campo: str, valor: str):
     db.commit()
     db.refresh(nuevo)
     return nuevo
+
+
+def _buscar_animal_por_ref(db: Session, ref: str):
+    """Busca un animal por código o nombre (insensible a mayúsculas)."""
+    ref = str(ref).strip().lower()
+    return db.scalars(
+        select(models.Animal).where(
+            (func.lower(models.Animal.Codigo) == ref) | (func.lower(models.Animal.Animal) == ref)
+        )
+    ).first()
 
 
 def _ejecutar_tool(db: Session, nombre: str, args: dict):
@@ -235,13 +291,57 @@ def _ejecutar_tool(db: Session, nombre: str, args: dict):
         ))
         return {"ok": True, "mensaje": f"Vacunación de {tipo.Tipo_Vacunacion} registrada para {animal.Codigo or animal.Animal}."}, None
 
+    if nombre == "actualizar_animal":
+        animal = _buscar_animal_por_ref(db, args["animal"])
+        if not animal:
+            return {"ok": False, "error": f"No encontré un animal con código o nombre '{args['animal']}'."}, None
+        cambios = {}
+        if args.get("valor") is not None:
+            cambios["Valor"] = args["valor"]
+        if args.get("avaluo") is not None:
+            cambios["Avaluo"] = args["avaluo"]
+        if args.get("costo") is not None:
+            cambios["Costo"] = args["costo"]
+        if args.get("estado"):
+            cambios["Estado"] = "A" if args["estado"] == "activo" else "I"
+        if not cambios:
+            return {"ok": False, "error": "No indicaste qué campo actualizar (valor, avalúo, costo o estado)."}, None
+        service.actualizar_animal(db, animal, schemas.AnimalUpdate(**cambios))
+        return {"ok": True, "mensaje": f"Animal {animal.Codigo or animal.Animal} actualizado.", "cambios": cambios}, None
+
+    if nombre == "registrar_alimentacion":
+        animal = _buscar_animal_por_ref(db, args["animal"])
+        if not animal:
+            return {"ok": False, "error": f"No encontré un animal con código o nombre '{args['animal']}'."}, None
+        proceso = _get_or_create(db, models.ProcesoPecuario, "Proceso_Pecuario", "Alimentación")
+        detalle_obs = args["alimento"]
+        if args.get("cantidad_kg"):
+            detalle_obs += f" ({args['cantidad_kg']} kg)"
+        service.agregar_detalle(db, animal, schemas.DetalleAnimalCreate(
+            Proceso_Pecuario_Id=proceso.Id_Proceso_Pecuario,
+            Costo=args.get("costo"),
+            Observaciones=detalle_obs,
+        ))
+        return {"ok": True, "mensaje": f"Alimentación '{detalle_obs}' registrada para {animal.Codigo or animal.Animal}."}, None
+
+    if nombre == "alertas_finca":
+        alertas = []
+        for p in service.listar_productos(db):
+            if p.stock == 0:
+                alertas.append({"tipo": "insumo_agotado", "detalle": f"{p.Producto}: sin stock"})
+            elif p.stock <= 10:
+                alertas.append({"tipo": "stock_bajo", "detalle": f"{p.Producto}: quedan {p.stock}"})
+        activos = [a for a in db.scalars(select(models.Animal)).all() if a.Estado == ESTADO_ACTIVO]
+        sin_vacuna = [
+            a for a in activos
+            if not any(d.Tipo_Vacunacion_Id for d in a.detalles)
+        ]
+        for a in sin_vacuna:
+            alertas.append({"tipo": "sin_vacunas", "detalle": f"{a.Codigo or a.Animal} no tiene vacunaciones registradas"})
+        return {"total_alertas": len(alertas), "alertas": alertas}, None
+
     if nombre == "historial_animal":
-        ref = str(args["animal"]).lower()
-        animal = db.scalars(
-            select(models.Animal).where(
-                (func.lower(models.Animal.Codigo) == ref) | (func.lower(models.Animal.Animal) == ref)
-            )
-        ).first()
+        animal = _buscar_animal_por_ref(db, args["animal"])
         if not animal:
             return {"ok": False, "error": f"No encontré un animal con código o nombre '{args['animal']}'."}, None
         eventos = [

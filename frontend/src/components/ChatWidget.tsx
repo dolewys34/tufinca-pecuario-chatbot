@@ -10,6 +10,9 @@ const NOMBRE_HERRAMIENTA: Record<string, string> = {
   consultar_inventario: "insumos y stock",
   registrar_animal: "registro de animal",
   registrar_vacunacion: "registro de vacunación",
+  registrar_alimentacion: "registro de alimentación",
+  actualizar_animal: "actualización del animal",
+  alertas_finca: "alertas de la finca",
   historial_animal: "historial del animal",
   generar_grafico: "estadísticas",
 };
